@@ -361,15 +361,26 @@
       $('genDomain').addEventListener('keydown', e => { if (e.key === 'Enter') generateSingle(); });
 
       function generateSingle() {
-        const domain = $('genDomain').value.trim();
-        if (!domain) { $('genDomain').focus(); $('genDomain').style.borderColor = '#ff6b6b'; return; }
+        let domainRaw = $('genDomain').value.trim();
+        if (!domainRaw) { $('genDomain').focus(); $('genDomain').style.borderColor = '#ff6b6b'; return; }
         $('genDomain').style.borderColor = '';
+
+        // Clean the input — strip protocol, extract path if pasted as full URL
+        const cleaned = PhishConfig.cleanDomain(domainRaw);
+        const domain = cleaned.domain;
+        // If user pasted a full URL with path, pre-fill the path field
+        if (cleaned.path && !$('genPath').value.trim()) {
+          $('genPath').value = cleaned.path;
+        }
 
         const name = $('genName').value.trim() || undefined;
         const path = $('genPath').value.trim() || undefined;
 
         const hash = PhishConfig.generateHash(domain, name, path);
         const url  = base + '#' + hash;
+
+        // Update domain field to cleaned version
+        $('genDomain').value = domain;
 
         // Show result
         $('genLink').textContent = url;
@@ -415,7 +426,8 @@
         for (const line of lines) {
           // Accept "domain" or "domain | org name"
           const parts = line.split('|').map(s => s.trim());
-          const domain = parts[0];
+          const cleaned = PhishConfig.cleanDomain(parts[0]);
+          const domain = cleaned.domain;
           const name = parts[1] || undefined;
           const hash = PhishConfig.generateHash(domain, name);
           const url = base + '#' + hash;

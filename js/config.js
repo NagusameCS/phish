@@ -26,6 +26,21 @@ const PhishConfig = (() => {
     }
   }
 
+  /* ---------- Strip protocol & extract path from a URL-like string ---------- */
+  function cleanDomain(raw) {
+    let str = raw.trim();
+    // Strip protocol (http:// https:// or //)
+    str = str.replace(/^https?:\/\//i, '').replace(/^\/\//, '');
+    // Split on first '/' to separate domain from path
+    const slashIdx = str.indexOf('/');
+    if (slashIdx > 0) {
+      return { domain: str.slice(0, slashIdx), path: str.slice(slashIdx) };
+    }
+    // Strip trailing slash
+    str = str.replace(/\/+$/, '');
+    return { domain: str, path: null };
+  }
+
   /* ---------- Parse hash ---------- */
   function parseHash() {
     const raw = location.hash.slice(1); // strip leading '#'
@@ -37,17 +52,19 @@ const PhishConfig = (() => {
     // Try JSON first
     try {
       const obj = JSON.parse(decoded);
+      const cleaned = cleanDomain(obj.d || obj.domain || 'example.com');
       return {
-        domain:  obj.d || obj.domain || 'example.com',
-        orgName: obj.n || obj.name   || null,
-        path:    obj.p || obj.path   || '/login',
+        domain:  cleaned.domain,
+        orgName: obj.n || obj.name || null,
+        path:    obj.p || obj.path || cleaned.path || '/login',
       };
     } catch {
-      // Plain string — treat as domain
+      // Plain string — treat as domain (possibly with protocol/path)
+      const cleaned = cleanDomain(decoded);
       return {
-        domain:  decoded.trim(),
+        domain:  cleaned.domain,
         orgName: null,
-        path:    '/login',
+        path:    cleaned.path || '/login',
       };
     }
   }
@@ -84,14 +101,19 @@ const PhishConfig = (() => {
 
   /* Convenience: generate a hash for a given domain (for link creation) */
   function generateHash(domain, orgName, path) {
-    if (orgName || path) {
-      const obj = { d: domain };
+    // Sanitise domain input — strip protocol, extract path if embedded
+    const cleaned = cleanDomain(domain);
+    const d = cleaned.domain;
+    const p = path || cleaned.path || undefined;
+
+    if (orgName || p) {
+      const obj = { d };
       if (orgName) obj.n = orgName;
-      if (path)    obj.p = path;
+      if (p)       obj.p = p;
       return b64urlEncode(JSON.stringify(obj));
     }
-    return b64urlEncode(domain);
+    return b64urlEncode(d);
   }
 
-  return { get, generateHash, b64urlEncode, b64urlDecode };
+  return { get, generateHash, b64urlEncode, b64urlDecode, cleanDomain };
 })();
