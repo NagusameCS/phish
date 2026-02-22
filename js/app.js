@@ -20,9 +20,10 @@
   }
 
   /* ---- 1. Disguise the URL bar ---- */
-  // Use history.replaceState to hide the base64 hash and show a clean path
+  // Use history.replaceState to hide the base64 hash
+  // MUST use a relative path (no leading /) so CSS/JS resource paths stay valid
   try {
-    const fakePath = cfg.path || '/login';
+    const fakePath = (cfg.path || '/login').replace(/^\/+/, '') || 'login';
     history.replaceState(null, '', fakePath);
   } catch (_e) { /* replaceState may fail on some origins */ }
 
