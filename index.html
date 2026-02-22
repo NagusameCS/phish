@@ -68,8 +68,18 @@
         </ol>
       </div>
 
+      <div id="geoSection" class="reveal-section" style="display:none">
+        <h2>Your Approximate Location</h2>
+        <div id="geoMap" class="geo-map"></div>
+        <div id="geoDetails" class="geo-details"></div>
+      </div>
+
       <div class="reveal-section">
         <h2>Data Collected</h2>
+        <button id="dataToggle" class="data-toggle">
+          <span id="dataToggleLabel">Loading&hellip;</span>
+          <span class="toggle-arrow">&#9660;</span>
+        </button>
         <div id="dataCards" class="data-cards">
           <!-- Cards injected by reveal.js -->
         </div>
@@ -84,13 +94,9 @@
           <li><strong>Enable 2FA / MFA</strong> &mdash; even leaked passwords are useless without the second factor.</li>
           <li><strong>Report suspicious emails</strong> &mdash; your IT/security team wants to know.</li>
         </ul>
-      </div>
-
-      <div class="reveal-section cta">
-        <h2>Learn More</h2>
-        <p>Talk to your organization&rsquo;s security team about phishing simulations and
-           training resources.</p>
-        <button id="btnReset" class="btn-outline">Run Again</button>
+        <div style="text-align:center;margin-top:20px;">
+          <button id="btnReset" class="btn-outline">Run Again</button>
+        </div>
       </div>
     </div>
   </div>

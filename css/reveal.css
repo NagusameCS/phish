@@ -301,6 +301,60 @@
   .reveal-header h1 { font-size: 22px; }
   .stat-bar { flex-wrap: wrap; }
   .stat-item { flex: 1 1 33%; }
+  .geo-map { height: 220px; }
+}
+
+/* ---- Geo map ---- */
+.geo-map {
+  width: 100%;
+  height: 300px;
+  border-radius: 6px;
+  border: 1px solid var(--r-border);
+  margin-bottom: 12px;
+  background: var(--r-surface);
+  overflow: hidden;
+}
+
+.geo-details {
+  font-family: var(--r-mono);
+  font-size: 11px;
+  color: var(--r-muted);
+  line-height: 1.7;
+  word-break: break-word;
+}
+
+/* ---- Data toggle button ---- */
+.data-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 20px;
+  background: var(--r-surface);
+  border: 1px solid var(--r-border);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--r-text);
+  font-family: inherit;
+  margin-bottom: 16px;
+  transition: background .15s, border-color .15s;
+}
+
+.data-toggle:hover {
+  background: var(--r-accent-light);
+  border-color: var(--r-accent);
+}
+
+.data-toggle .toggle-arrow {
+  font-size: 10px;
+  color: var(--r-muted);
+  transition: transform .25s ease;
+}
+
+.data-toggle.expanded .toggle-arrow {
+  transform: rotate(180deg);
 }
 
 /* ============================================================

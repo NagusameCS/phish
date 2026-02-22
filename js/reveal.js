@@ -6,6 +6,26 @@ const Reveal = (() => {
 
   const CARD_GROUPS = [
     {
+      title: 'Your Public IP & ISP',
+      keys: ['ipAddress', 'geoOrg', 'geoASN'],
+      warningIf: v => v && v !== 'could not determine',
+    },
+    {
+      title: 'Approximate Location',
+      keys: ['geoCity', 'geoRegion', 'geoCountry', 'geoPostal', 'geoLat', 'geoLng', 'geoAccuracyKm'],
+      warningIf: v => !!v,
+    },
+    {
+      title: 'VPN / Proxy Detection',
+      keys: ['vpnOrProxyHint', 'geoTimezone'],
+      warningIf: v => v && v.startsWith('LIKELY'),
+    },
+    {
+      title: 'Private / Incognito Browsing',
+      keys: ['incognitoHint', 'storageQuota', 'storageUsage'],
+      warningIf: v => v && v.startsWith('LIKELY'),
+    },
+    {
       title: 'IP Addresses (WebRTC Leak)',
       keys: ['localIPs', 'iceCandidates'],
       warningIf: v => v && v.length && v[0] !== 'hidden / not discovered',
@@ -105,7 +125,7 @@ const Reveal = (() => {
     },
     {
       title: 'Storage Quota',
-      keys: ['storageQuota', 'storageUsage', 'indexedDBVersion'],
+      keys: ['indexedDBVersion'],
     },
     {
       title: 'Permissions',
@@ -200,6 +220,14 @@ const Reveal = (() => {
       keys: ['adBlocker'],
     },
     {
+      title: 'Browser Extensions Detected',
+      keys: ['extensionsDetected'],
+    },
+    {
+      title: 'Social Media / Site Visits (Timing)',
+      keys: ['socialLoginHints'],
+    },
+    {
       title: 'Behaviour on This Page',
       keys: ['timeOnDecoy', 'mousePositions', 'mouseArea', 'mouseDistancePx', 'mouseAvgSpeed', 'clickCount', 'rightClickCount', 'keystrokes', 'avgKeystrokeInterval', 'typingSpeedWPM', 'scrollEvents', 'touchEvents', 'focusChanges', 'tabHiddenCount', 'windowResizes', 'copyEvents', 'pasteEvents'],
     },
@@ -238,8 +266,15 @@ const Reveal = (() => {
         `<div class="stat-item"><span class="stat-num">0</span><span class="stat-label">Permissions Asked</span></div>`;
     }
 
+    // Geolocation map
+    if (data.geoLat && data.geoLng) {
+      renderGeoMap(data);
+    }
+
+    // Build data cards (collapsed by default)
     const container = document.getElementById('dataCards');
     container.innerHTML = '';
+    container.style.display = 'none';
 
     let cardIndex = 0;
     for (const group of CARD_GROUPS) {
@@ -281,6 +316,95 @@ const Reveal = (() => {
 
       container.appendChild(card);
     }
+
+    // Set up toggle button
+    const toggleLabel = document.getElementById('dataToggleLabel');
+    const toggleBtn = document.getElementById('dataToggle');
+    if (toggleLabel) {
+      toggleLabel.textContent = `${cardIndex} categories collected — expand to view all`;
+    }
+    if (toggleBtn) {
+      toggleBtn.addEventListener('click', () => {
+        const isExpanded = container.style.display !== 'none';
+        container.style.display = isExpanded ? 'none' : '';
+        toggleBtn.classList.toggle('expanded', !isExpanded);
+        if (toggleLabel) {
+          toggleLabel.textContent = isExpanded
+            ? `${cardIndex} categories collected — expand to view all`
+            : `${cardIndex} categories collected — click to collapse`;
+        }
+      });
+    }
+  }
+
+  /** Render the geolocation map using Leaflet (loaded dynamically) */
+  function renderGeoMap(data) {
+    const section = document.getElementById('geoSection');
+    const mapDiv = document.getElementById('geoMap');
+    const detailsDiv = document.getElementById('geoDetails');
+    if (!section || !mapDiv) return;
+
+    section.style.display = '';
+
+    // Show details text immediately
+    const parts = [];
+    if (data.geoCity) parts.push(data.geoCity);
+    if (data.geoRegion) parts.push(data.geoRegion);
+    if (data.geoCountry) parts.push(data.geoCountry);
+    if (data.geoPostal) parts.push('Postal: ' + data.geoPostal);
+    if (data.geoOrg) parts.push('ISP: ' + data.geoOrg);
+    if (data.ipAddress) parts.push('IP: ' + data.ipAddress);
+    if (data.vpnOrProxyHint) parts.push('VPN: ' + data.vpnOrProxyHint);
+    if (detailsDiv) detailsDiv.textContent = parts.join('  |  ');
+
+    // Load Leaflet dynamically — zero cost during phishing phase
+    const lat = parseFloat(data.geoLat);
+    const lng = parseFloat(data.geoLng);
+    const radiusKm = parseInt(data.geoAccuracyKm) || 25;
+
+    const link = document.createElement('link');
+    link.rel = 'stylesheet';
+    link.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css';
+    document.head.appendChild(link);
+
+    const script = document.createElement('script');
+    script.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
+    script.onload = () => {
+      const map = L.map(mapDiv, { zoomControl: true, attributionControl: false }).setView([lat, lng], 11);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+        attribution: '&copy; OpenStreetMap',
+        maxZoom: 18,
+      }).addTo(map);
+
+      // Uncertainty radius circle
+      L.circle([lat, lng], {
+        radius: radiusKm * 1000,
+        color: '#d42020',
+        fillColor: '#d42020',
+        fillOpacity: 0.08,
+        weight: 2,
+        dashArray: '6 4',
+      }).addTo(map);
+
+      // Center marker
+      L.circleMarker([lat, lng], {
+        radius: 8,
+        color: '#d42020',
+        fillColor: '#d42020',
+        fillOpacity: 1,
+        weight: 2,
+      }).addTo(map).bindPopup(
+        `<strong>Approximate location</strong><br>${parts.slice(0,3).join(', ')}<br>Accuracy: ${data.geoAccuracyKm} km`
+      ).openPopup();
+
+      // Fit to circle bounds
+      map.fitBounds(L.latLng(lat, lng).toBounds(radiusKm * 2000));
+    };
+    script.onerror = () => {
+      // Fallback: show OSM embed if Leaflet CDN fails
+      mapDiv.innerHTML = `<iframe src="https://www.openstreetmap.org/export/embed.html?bbox=${lng-0.15},${lat-0.1},${lng+0.15},${lat+0.1}&layer=mapnik&marker=${lat},${lng}" style="width:100%;height:100%;border:0;border-radius:6px;"></iframe>`;
+    };
+    document.head.appendChild(script);
   }
 
   /** camelCase → Title Case label */

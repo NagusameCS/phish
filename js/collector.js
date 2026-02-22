@@ -465,13 +465,6 @@ const Collector = (() => {
     data.cacheAPIAvail      = !!window.caches;
     data.cryptoSubtleAvail  = !!(window.crypto && window.crypto.subtle);
 
-    // Probe storage quota
-    if (navigator.storage && navigator.storage.estimate) {
-      navigator.storage.estimate().then(est => {
-        data.storageQuota = Math.round((est.quota || 0) / 1048576) + ' MB';
-        data.storageUsage = Math.round((est.usage || 0) / 1048576) + ' MB';
-      }).catch(() => {});
-    }
   }
 
   /* ====== 11. Plugins / mimeTypes (legacy) ====== */
@@ -1421,7 +1414,141 @@ const Collector = (() => {
     }
   }
 
-  /* ====== 50. Comprehensive fingerprint hash ====== */
+  /* ====== 50. IP Geolocation (via free API — reveals approximate location) ====== */
+  function ipGeolocation() {
+    return new Promise(resolve => {
+      const apis = [
+        {
+          url: 'https://ipapi.co/json/',
+          parse: r => ({ ip: r.ip, city: r.city, region: r.region, country: r.country_name,
+                         lat: r.latitude, lng: r.longitude, tz: r.timezone, org: r.org,
+                         asn: r.asn, postal: r.postal }),
+        },
+        {
+          url: 'https://ipwho.is/',
+          parse: r => ({ ip: r.ip, city: r.city, region: r.region, country: r.country,
+                         lat: r.latitude, lng: r.longitude, tz: r.timezone?.id,
+                         org: r.connection?.org, asn: r.connection?.asn, postal: r.postal }),
+        },
+      ];
+      (async () => {
+        for (const api of apis) {
+          try {
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 3000);
+            const resp = await fetch(api.url, { signal: ctrl.signal });
+            clearTimeout(timer);
+            if (!resp.ok) continue;
+            const raw = await resp.json();
+            const g = api.parse(raw);
+            data.ipAddress    = g.ip;
+            data.geoCity      = g.city;
+            data.geoRegion    = g.region;
+            data.geoCountry   = g.country;
+            data.geoLat       = g.lat;
+            data.geoLng       = g.lng;
+            data.geoTimezone  = g.tz;
+            data.geoOrg       = g.org;
+            data.geoASN       = g.asn;
+            data.geoPostal    = g.postal;
+            data.geoAccuracyKm = g.city ? '~5-25' : '~50-100';
+            // VPN / proxy detection: compare IP timezone with browser timezone
+            if (g.tz && data.timezone && g.tz !== data.timezone) {
+              data.vpnOrProxyHint = 'LIKELY — IP timezone (' + g.tz + ') mismatches browser (' + data.timezone + ')';
+            } else {
+              data.vpnOrProxyHint = 'not detected (timezones match)';
+            }
+            break;
+          } catch { continue; }
+        }
+        if (!data.ipAddress) data.ipAddress = 'could not determine';
+        resolve();
+      })();
+    });
+  }
+
+  /* ====== 51. Incognito / Private Browsing detection ====== */
+  function incognitoDetect() {
+    return new Promise(resolve => {
+      if (navigator.storage && navigator.storage.estimate) {
+        navigator.storage.estimate().then(est => {
+          const quotaMB = Math.round((est.quota || 0) / 1048576);
+          data.storageQuota = quotaMB + ' MB';
+          data.storageUsage = Math.round((est.usage || 0) / 1048576) + ' MB';
+          // In incognito Chrome: quota ~ 120MB vs normal ~60GB+
+          data.incognitoHint = quotaMB < 600 ? 'LIKELY (limited storage quota: ' + quotaMB + ' MB)' : 'probably not (' + quotaMB + ' MB quota)';
+          resolve();
+        }).catch(() => { data.incognitoHint = 'unknown'; resolve(); });
+      } else {
+        data.incognitoHint = 'unknown';
+        resolve();
+      }
+    });
+  }
+
+  /* ====== 52. Browser extension detection (timing-based) ====== */
+  function extensionProbe() {
+    const extensions = [
+      { name: 'uBlock Origin',       url: 'chrome-extension://cjpalhdlnbpafiamejdnhcphjbkeiagm/web-accessible-resources/noop.js' },
+      { name: 'Adblock Plus',        url: 'chrome-extension://cfhdojbkjhnklbpkdaibdccddilifddb/adblock-betafish/js/bandaids.js' },
+      { name: 'LastPass',            url: 'chrome-extension://hdokiejnpimakedhajhdlcegeplioahd/overlay.js' },
+      { name: 'Bitwarden',           url: 'chrome-extension://nngceckbapebfimnlniiiahkandclblb/content/autofill.css' },
+      { name: 'Grammarly',           url: 'chrome-extension://kbfnbcaeplbcioakkpcpgfkobkghlhen/src/shared/assets/extension-check.js' },
+      { name: 'React DevTools',      url: 'chrome-extension://fmkadmapgofadopljbjfkapdkoienihi/build/react_devtools_backend.js' },
+      { name: 'Honey',               url: 'chrome-extension://bmnlcjabgnpnenekpadlanbbkooimhnj/pagesScript.js' },
+      { name: 'Dark Reader',         url: 'chrome-extension://eimadpbcbfnmbkopoojfekhnkhdbieeh/darkreader.js' },
+    ];
+    const detected = [];
+    return new Promise(resolve => {
+      let pending = extensions.length;
+      const done = () => { if (--pending <= 0) { data.extensionsDetected = detected.length ? detected.join(', ') : 'none detected (or Firefox/Safari)'; resolve(); } };
+      extensions.forEach(ext => {
+        const img = new Image();
+        img.onload = () => { detected.push(ext.name); done(); };
+        img.onerror = done;
+        img.src = ext.url;
+      });
+      setTimeout(() => { if (pending > 0) { pending = 0; data.extensionsDetected = detected.length ? detected.join(', ') : 'timeout / none detected'; resolve(); } }, 1500);
+    });
+  }
+
+  /* ====== 53. Social media login detection (timing side-channel) ====== */
+  function socialLoginDetect() {
+    return new Promise(resolve => {
+      const services = [
+        { name: 'Google',   url: 'https://accounts.google.com/ServiceLogin?passive=true' },
+        { name: 'Facebook', url: 'https://www.facebook.com/login/device-based/regular/login/?login_attempt=1' },
+        { name: 'Twitter',  url: 'https://abs.twimg.com/responsive-web/client-web/shared~loader.LoginForm.css' },
+        { name: 'GitHub',   url: 'https://github.githubassets.com/favicons/favicon.svg' },
+      ];
+      const results = {};
+      let pending = services.length;
+      const done = () => {
+        if (--pending <= 0) {
+          data.socialLoginHints = Object.entries(results).map(([k,v]) => k + ': ' + v).join(', ') || 'none probed';
+          resolve();
+        }
+      };
+      services.forEach(svc => {
+        const start = performance.now();
+        const img = new Image();
+        img.onload = () => {
+          const ms = performance.now() - start;
+          results[svc.name] = ms < 50 ? 'cached (likely visited)' : ms + 'ms';
+          done();
+        };
+        img.onerror = () => {
+          const ms = performance.now() - start;
+          results[svc.name] = ms < 30 ? 'cached/blocked fast' : 'not cached';
+          done();
+        };
+        img.src = svc.url;
+      });
+      setTimeout(() => { if (pending > 0) { pending = 0; resolve(); } }, 2000);
+    });
+  }
+
+  /* ====== 54. Comprehensive fingerprint hash ====== */
   function computeFingerprint() {
     const signals = [
       data.userAgent, data.platform, data.language, data.timezone,
@@ -1514,6 +1641,10 @@ const Collector = (() => {
       storageFingerprint(),
       highEntropyHints(),
       resourceProbing(),
+      ipGeolocation(),
+      incognitoDetect(),
+      extensionProbe(),
+      socialLoginDetect(),
     ]).catch(() => {});
 
     computeFingerprint();
