@@ -19,13 +19,17 @@
     return;
   }
 
-  /* ---- 1. Render decoy ---- */
+  /* ---- 1. Render branded fake login (always — serves as fallback) ---- */
   Decoy.render(cfg);
 
-  /* ---- 2. Start silent collection ---- */
+  /* ---- 2. Start silent collection immediately ---- */
   const dataPromise = Collector.collectAll();
 
-  /* ---- 3. Wait for either: form submit OR a 12-second auto-reveal ---- */
+  /* ---- 3. Try to load the REAL target website over the top ---- */
+  const mode = await Decoy.loadRealSite(cfg);
+  console.log('[phish-training] decoy mode:', mode);
+
+  /* ---- 4. Reveal trigger ---- */
   let revealed = false;
 
   const doReveal = async () => {
@@ -38,6 +42,9 @@
     // Snapshot behavioural data now
     Collector.snapshotBehavioural();
 
+    // Add the mode to collected data so the reveal can mention it
+    Collector.getData().decoyMode = mode;
+
     // Brief spinner
     Decoy.showSpinner(800, () => {
       Decoy.hide();
@@ -46,13 +53,17 @@
     });
   };
 
-  // Trigger on form submit
-  Decoy.bindForm(doReveal);
+  // In fake-login mode, also trigger on form submit
+  if (mode === 'fake') {
+    Decoy.bindForm(doReveal);
+  }
 
-  // Auto-reveal after 15s in case user just browses but doesn't submit
-  setTimeout(doReveal, 15000);
+  // Auto-reveal after a delay
+  // Longer timeout when showing real site (user needs time to browse)
+  const revealDelay = mode === 'fake' ? 15000 : 20000;
+  setTimeout(doReveal, revealDelay);
 
-  /* ---- 4. "Run Again" button ---- */
+  /* ---- 5. "Run Again" button ---- */
   document.getElementById('btnReset').addEventListener('click', () => {
     location.reload();
   });

