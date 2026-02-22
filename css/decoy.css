@@ -1,0 +1,189 @@
+/* ============================================================
+   decoy.css — Styles for the fake / impersonation layer
+   ============================================================ */
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html, body {
+  height: 100%;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
+    Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
+  background: #f5f6fa;
+  color: #333;
+}
+
+/* ---- Fake address bar at the top ---- */
+.fake-address-bar {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  background: #dee1e6;
+  border-bottom: 1px solid #bcc0c7;
+  font-size: 14px;
+  color: #333;
+  user-select: none;
+}
+
+.lock-icon {
+  font-size: 14px;
+  color: #2e7d32;
+}
+
+.url-text {
+  font-family: "Segoe UI", Roboto, monospace;
+  color: #1a1a1a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ---- Decoy layer ---- */
+.decoy-layer {
+  min-height: 100vh;
+  padding-top: 56px; /* clear the fake address bar */
+  display: flex;
+  flex-direction: column;
+}
+
+.decoy-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 32px 16px;
+}
+
+/* ---- Login card ---- */
+.decoy-card {
+  width: 100%;
+  max-width: 400px;
+  background: #fff;
+  border-radius: 12px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.08);
+  padding: 40px 32px 32px;
+  text-align: center;
+}
+
+.decoy-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  margin-bottom: 12px;
+  border-radius: 8px;
+}
+
+.decoy-title {
+  font-size: 24px;
+  font-weight: 600;
+  margin-bottom: 4px;
+}
+
+.decoy-subtitle {
+  font-size: 14px;
+  color: #666;
+  margin-bottom: 24px;
+}
+
+/* ---- Form ---- */
+.input-group {
+  text-align: left;
+  margin-bottom: 16px;
+}
+
+.input-group label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin-bottom: 4px;
+  color: #555;
+}
+
+.input-group input {
+  width: 100%;
+  padding: 10px 12px;
+  font-size: 15px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  outline: none;
+  transition: border-color .2s;
+}
+
+.input-group input:focus {
+  border-color: #4a90d9;
+  box-shadow: 0 0 0 3px rgba(74,144,217,.15);
+}
+
+.btn-primary {
+  width: 100%;
+  padding: 11px 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: #fff;
+  background: #4a90d9;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background .2s;
+}
+
+.btn-primary:hover {
+  background: #3a7bc8;
+}
+
+.decoy-links {
+  margin-top: 20px;
+  display: flex;
+  justify-content: space-between;
+  font-size: 13px;
+}
+
+.decoy-links a {
+  color: #4a90d9;
+  text-decoration: none;
+}
+
+.decoy-links a:hover {
+  text-decoration: underline;
+}
+
+/* ---- Footer ---- */
+.decoy-footer {
+  text-align: center;
+  font-size: 12px;
+  color: #999;
+  padding: 20px 0;
+}
+
+/* ---- Spinner overlay (shown while collecting) ---- */
+.spinner-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255,255,255,.85);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #ddd;
+  border-top-color: #4a90d9;
+  border-radius: 50%;
+  animation: spin .7s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}

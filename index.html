@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <!-- Title is dynamically set to mimic the target domain -->
+  <title>Loading…</title>
+  <link rel="stylesheet" href="css/decoy.css"  id="decoy-styles" />
+  <link rel="stylesheet" href="css/reveal.css" id="reveal-styles" disabled />
+  <link rel="icon" id="favicon" href="data:," />
+</head>
+<body>
+
+  <!-- ===================== DECOY LAYER ===================== -->
+  <div id="decoy" class="decoy-layer">
+    <!-- Top browser-style address bar illusion -->
+    <div class="fake-address-bar" id="fakeBar">
+      <span class="lock-icon">&#128274;</span>
+      <span class="url-text" id="fakeUrl">https://example.com</span>
+    </div>
+
+    <!-- Generic login page – works for any domain -->
+    <div class="decoy-body">
+      <div class="decoy-card">
+        <img id="decoyLogo" class="decoy-logo" src="" alt="logo" />
+        <h1 id="decoyTitle" class="decoy-title">Sign in</h1>
+        <p id="decoySubtitle" class="decoy-subtitle">Use your organizational account</p>
+
+        <form id="decoyForm" autocomplete="off">
+          <div class="input-group">
+            <label for="decoyEmail">Email or username</label>
+            <input type="text" id="decoyEmail" placeholder="user@example.com" />
+          </div>
+          <div class="input-group">
+            <label for="decoyPass">Password</label>
+            <input type="password" id="decoyPass" placeholder="Password" />
+          </div>
+          <button type="submit" class="btn-primary" id="decoySubmit">Sign in</button>
+        </form>
+
+        <div class="decoy-links">
+          <a href="#">Forgot password?</a>
+          <a href="#">Create account</a>
+        </div>
+      </div>
+      <footer class="decoy-footer" id="decoyFooter">&copy; 2026 Example Corp. All rights reserved.</footer>
+    </div>
+  </div>
+
+  <!-- ===================== REVEAL LAYER ===================== -->
+  <div id="reveal" class="reveal-layer" style="display:none;">
+    <div class="reveal-container">
+      <div class="reveal-header">
+        <div class="warning-icon">&#9888;&#65039;</div>
+        <h1>You Were Just &ldquo;Phished&rdquo;</h1>
+        <p class="reveal-tagline">
+          <strong>Don&rsquo;t worry &mdash; this was a training exercise.</strong><br />
+          No data left your computer. Everything below was collected
+          <em>entirely inside your browser</em> without asking for a single permission.
+        </p>
+      </div>
+
+      <div class="reveal-section">
+        <h2>&#128270; What Happened</h2>
+        <ol class="timeline">
+          <li>You clicked a link you received (email, chat, etc.).</li>
+          <li>The link brought you to <strong>this page</strong>, which <em>pretended</em> to be
+              <code id="revealDomain">example.com</code>.</li>
+          <li>While you were looking at the fake page, JavaScript silently
+              fingerprinted your browser.</li>
+          <li>A real attacker would have sent all of this to their server.<br />
+              <strong>We kept everything local.</strong></li>
+        </ol>
+      </div>
+
+      <div class="reveal-section">
+        <h2>&#128451; Data We Collected</h2>
+        <div id="dataCards" class="data-cards">
+          <!-- Cards injected by reveal.js -->
+        </div>
+      </div>
+
+      <div class="reveal-section">
+        <h2>&#128737;&#65039; How to Protect Yourself</h2>
+        <ul class="tips">
+          <li><strong>Check the URL</strong> &mdash; always look at the address bar before entering credentials.</li>
+          <li><strong>Hover before you click</strong> &mdash; inspect link destinations in emails.</li>
+          <li><strong>Use a password manager</strong> &mdash; it won&rsquo;t auto-fill on the wrong domain.</li>
+          <li><strong>Enable 2FA / MFA</strong> &mdash; even leaked passwords are useless without the second factor.</li>
+          <li><strong>Report suspicious emails</strong> &mdash; your IT/security team wants to know.</li>
+        </ul>
+      </div>
+
+      <div class="reveal-section cta">
+        <h2>&#127891; Learn More</h2>
+        <p>Talk to your organization&rsquo;s security team about phishing simulations and
+           training resources.</p>
+        <button id="btnReset" class="btn-outline">Run Again</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script src="js/config.js"></script>
+  <script src="js/collector.js"></script>
+  <script src="js/decoy.js"></script>
+  <script src="js/reveal.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>

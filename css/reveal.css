@@ -1,0 +1,203 @@
+/* ============================================================
+   reveal.css — Styles for the educational reveal layer
+   ============================================================ */
+
+/* ---- Container ---- */
+.reveal-layer {
+  min-height: 100vh;
+  background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+  color: #eee;
+  padding: 40px 20px 80px;
+}
+
+.reveal-container {
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+/* ---- Header ---- */
+.reveal-header {
+  text-align: center;
+  margin-bottom: 40px;
+}
+
+.warning-icon {
+  font-size: 64px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.reveal-header h1 {
+  font-size: 32px;
+  font-weight: 700;
+  color: #ff6b6b;
+  margin-bottom: 12px;
+}
+
+.reveal-tagline {
+  font-size: 16px;
+  line-height: 1.6;
+  color: #ccc;
+}
+
+.reveal-tagline strong {
+  color: #7bed9f;
+}
+
+/* ---- Sections ---- */
+.reveal-section {
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 12px;
+  padding: 28px 24px;
+  margin-bottom: 24px;
+}
+
+.reveal-section h2 {
+  font-size: 20px;
+  margin-bottom: 16px;
+  color: #ffd93d;
+}
+
+/* ---- Timeline ---- */
+.timeline {
+  list-style: none;
+  counter-reset: step;
+  padding-left: 0;
+}
+
+.timeline li {
+  counter-increment: step;
+  position: relative;
+  padding-left: 40px;
+  margin-bottom: 14px;
+  line-height: 1.5;
+}
+
+.timeline li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0; top: 0;
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: #ff6b6b;
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.timeline li code {
+  background: rgba(255,255,255,.12);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+/* ---- Data cards grid ---- */
+.data-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+  gap: 16px;
+}
+
+.data-card {
+  background: rgba(0,0,0,.3);
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 10px;
+  padding: 18px 20px;
+  overflow: hidden;
+}
+
+.data-card h3 {
+  font-size: 14px;
+  text-transform: uppercase;
+  letter-spacing: .6px;
+  color: #ffd93d;
+  margin-bottom: 10px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.data-card .value {
+  font-family: "Cascadia Code", "Fira Code", "Consolas", monospace;
+  font-size: 13px;
+  color: #adf7b6;
+  word-break: break-all;
+  white-space: pre-wrap;
+  line-height: 1.55;
+  max-height: 180px;
+  overflow-y: auto;
+}
+
+.data-card .value.warning {
+  color: #ff6b6b;
+}
+
+.data-card canvas {
+  width: 100%;
+  height: auto;
+  border-radius: 6px;
+  margin-top: 6px;
+  background: #fff;
+}
+
+/* ---- Tips ---- */
+.tips {
+  list-style: none;
+  padding: 0;
+}
+
+.tips li {
+  padding: 8px 0 8px 28px;
+  position: relative;
+  line-height: 1.5;
+}
+
+.tips li::before {
+  content: "✓";
+  position: absolute;
+  left: 0;
+  color: #7bed9f;
+  font-weight: 700;
+}
+
+/* ---- CTA ---- */
+.cta {
+  text-align: center;
+}
+
+.btn-outline {
+  margin-top: 16px;
+  padding: 12px 32px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #ffd93d;
+  background: transparent;
+  border: 2px solid #ffd93d;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: .2s;
+}
+
+.btn-outline:hover {
+  background: #ffd93d;
+  color: #1a1a2e;
+}
+
+/* ---- Scrollbar (webkit) ---- */
+.data-card .value::-webkit-scrollbar { width: 6px; }
+.data-card .value::-webkit-scrollbar-thumb { background: rgba(255,255,255,.2); border-radius: 3px; }
+
+/* ---- Responsive ---- */
+@media (max-width: 500px) {
+  .data-cards {
+    grid-template-columns: 1fr;
+  }
+  .reveal-header h1 {
+    font-size: 24px;
+  }
+}
