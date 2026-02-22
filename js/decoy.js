@@ -52,9 +52,6 @@ const Decoy = (() => {
     // Page title
     document.title = `Sign in – ${cfg.orgName}`;
 
-    // Fake address bar
-    document.getElementById('fakeUrl').textContent = `https://${cfg.domain}${cfg.path}`;
-
     // Logo — generate an SVG letter-icon with the brand colour
     const logo = document.getElementById('decoyLogo');
     const svg  = generateLogoSvg(cfg.logoLetter, cfg.brandColor);
@@ -81,9 +78,6 @@ const Decoy = (() => {
       fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
     };
     realFav.src = `https://www.google.com/s2/favicons?domain=${cfg.domain}&sz=64`;
-
-    // Apply brand colour to fake address bar lock icon
-    document.querySelector('.lock-icon').style.color = '#2e7d32';
   }
 
   /* ==========================================================
