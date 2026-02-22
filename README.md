@@ -18,23 +18,38 @@ A **100% client-side** phishing awareness training tool hosted on GitHub Pages. 
 
 1. They click the link.
 2. They see a **convincing login page** branded to look like the target domain.
-3. In the background, JavaScript silently collects every piece of data the browser exposes **without asking for any permission**:
+3. In the background, JavaScript silently collects every piece of data the browser exposes **without asking for any permission** (~50 collectors):
    - IP addresses (WebRTC STUN leak)
-   - Full browser/OS fingerprint
-   - Canvas & WebGL fingerprints
-   - Audio context fingerprint
-   - Screen resolution, colour depth, pixel ratio
-   - Timezone, locale, language
-   - Installed fonts (measurement-based)
+   - Full browser/OS fingerprint & UA Client Hints (CPU arch, bitness, platform version)
+   - Canvas fingerprint (standard + emoji rendering + composite ops + filters)
+   - WebGL / GPU fingerprint (vendor, renderer, shader precision formats)
+   - Audio context fingerprint (deep: sample rate, latency, channels)
+   - SVG text rendering fingerprint
+   - Screen resolution, colour depth, pixel ratio, orientation
+   - Timezone, locale, calendar, numbering system, collation order
+   - Installed fonts (measurement-based detection)
    - Battery status
-   - Hardware specs (CPU cores, RAM)
-   - Network connection info
-   - Storage/API feature probes
-   - Mouse movement, clicks, keystrokes, scroll behaviour
-   - Navigation timing, referrer
+   - Hardware specs (CPU cores, RAM, touch points)
+   - Network connection info, protocol, secure context
+   - Storage/API feature probes (50+ APIs tested)
+   - CSS feature support (30+ properties including modern selectors)
+   - JS language feature detection (BigInt, WeakRef, SharedArrayBuffer, etc.)
+   - Shape Detection APIs (barcode, face, text, EyeDropper)
+   - Performance & Web Vitals (FCP, LCP, CLS, paint timing)
+   - Math engine fingerprint
+   - String collation / Intl fingerprint
+   - Text metrics fingerprint
+   - Media devices, codecs, DRM, constraints
+   - Modern platform APIs (Web Components, View Transitions, Trusted Types, etc.)
+   - Color profile & gamut detection
+   - App & document state (PWA, standalone, charset, design mode)
+   - Mouse movement, clicks, keystrokes, scroll behaviour, typing speed
+   - Navigation timing, referrer, resource analysis
    - Ad-blocker detection
+   - Automation/bot detection
    - Permissions state
-   - Dark mode and motion preference
+   - Keyboard layout detection
+   - Motion sensor availability
    - A combined fingerprint hash
 4. After 15 seconds (or when they "submit" the fake form), the disguise drops.
 5. They see an **educational reveal page** explaining:
@@ -81,10 +96,11 @@ css/
   reveal.css        ← Educational reveal styles
 js/
   config.js         ← URL hash decoding & branding
-  collector.js      ← Data collection engine (18 collectors)
+  collector.js      ← Data collection engine (~50 collectors)
   decoy.js          ← Fake page rendering
   reveal.js         ← Educational reveal rendering
-  app.js            ← Main orchestrator + link generator
+  app.js            ← Main orchestrator
+generate.html       ← Standalone link generator subpage (single + batch)
 ```
 
 ## License

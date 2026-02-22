@@ -19,7 +19,7 @@ const Reveal = (() => {
     {
       icon: '🧬',
       title: 'UA Client Hints',
-      keys: ['uaBrands', 'uaPlatform', 'uaMobile'],
+      keys: ['uaBrands', 'uaPlatform', 'uaMobile', 'cpuArchitecture', 'cpuBitness', 'deviceModel', 'platformVersion', 'wow64', 'formFactor', 'fullVersionList'],
     },
     {
       icon: '📐',
@@ -34,8 +34,18 @@ const Reveal = (() => {
     {
       icon: '🎨',
       title: 'Canvas Fingerprint',
-      keys: ['canvasHash'],
+      keys: ['canvasHash', 'emojiRenderHash'],
       canvas: true,
+    },
+    {
+      icon: '🖌️',
+      title: 'Canvas Advanced',
+      keys: ['canvasCompositeOps', 'canvasFilterSupport', 'canvasLineDashSupport', 'canvas2dAlpha', 'canvas2dDesync', 'canvas2dWillReadFreq', 'offscreenCanvasAvail', 'imageBitmapAvail', 'canvasColorSpace', 'maxColorGamut'],
+    },
+    {
+      icon: '📐',
+      title: 'SVG Fingerprint',
+      keys: ['svgTextBBox', 'svgTextLength'],
     },
     {
       icon: '🎮',
@@ -46,6 +56,11 @@ const Reveal = (() => {
       icon: '🎮',
       title: 'WebGL2 Parameters',
       keys: ['webgl2MaxSamples', 'webgl2Max3dTextureSize', 'webgl2MaxArrayTexLayers', 'webgl2MaxDrawBuffers', 'webgl2MaxColorAttachments', 'webgl2MaxTransformFBVaryings'],
+    },
+    {
+      icon: '🎯',
+      title: 'WebGL Shader Precision',
+      keys: ['webglPrecisionFormats'],
     },
     {
       icon: '🔊',
@@ -130,6 +145,11 @@ const Reveal = (() => {
       keys: ['cssGrid', 'cssSubgrid', 'cssContainerQ', 'cssNesting', 'cssHas', 'cssAccentColor', 'cssBackdropFilter', 'cssAspectRatio', 'cssScrollSnap', 'cssLayerSupport'],
     },
     {
+      icon: '🎨',
+      title: 'CSS Advanced Selectors & Features',
+      keys: ['cssEscapeAvail', 'cssHasSelector', 'cssIsSelector', 'cssWhereSelector', 'cssFocusVisible', 'cssFocusWithin', 'cssLogicalProps', 'cssClamp', 'cssScrollTimeline', 'cssAnchorPos', 'cssPopoverAttr', 'cssIndeterminate', 'cssStartingStyle', 'cssLightDark', 'cssRelativeColor', 'cssContainerUnits', 'cssMathFunctions'],
+    },
+    {
       icon: '🗣️',
       title: 'Speech Synthesis Voices',
       keys: ['speechVoiceCount', 'speechVoiceHash', 'speechVoices'],
@@ -138,6 +158,21 @@ const Reveal = (() => {
       icon: '🔢',
       title: 'Math Engine Fingerprint',
       keys: ['mathHash', 'mathTan', 'mathAcos', 'mathSinh', 'mathExpm1', 'mathLog1p', 'mathAtan2', 'mathCbrt', 'mathPow'],
+    },
+    {
+      icon: '🔡',
+      title: 'String & Collation Fingerprint',
+      keys: ['collationHash', 'collationOrder', 'relTimeFormat', 'pluralCategories', 'listFormatSample'],
+    },
+    {
+      icon: '⚙️',
+      title: 'JS Language Features',
+      keys: ['bigIntSupport', 'weakRefSupport', 'finalizationReg', 'structuredCloneAvail', 'proxySupport', 'symbolSupport', 'asyncGenerators', 'optionalChaining', 'nullishCoalescing', 'arrayAtSupport', 'objectHasOwn', 'errorCauseSupport', 'regexpLookbehind', 'sharedArrayBufferAvail', 'atomicsAvail', 'schedulerAvail', 'webLocksAvail', 'compressionStreamAvail', 'decompStreamAvail'],
+    },
+    {
+      icon: '👁️',
+      title: 'Shape Detection APIs',
+      keys: ['barcodeDetectorAvail', 'faceDetectorAvail', 'textDetectorAvail', 'eyeDropperAvail', 'barcodeFormats'],
     },
     {
       icon: '🤖',
@@ -163,6 +198,26 @@ const Reveal = (() => {
       icon: '📊',
       title: 'Performance & Memory',
       keys: ['jsHeapSizeLimit', 'jsHeapUsed', 'jsHeapTotal', 'resourceCount', 'resourceTypes', 'perfNowResolution', 'performanceTimeOrigin'],
+    },
+    {
+      icon: '🎨',
+      title: 'Paint & Web Vitals',
+      keys: ['firstPaint', 'firstContentfulPaint', 'largestContentfulPaint', 'cumulativeLayoutShift', 'longAnimFrameCount', 'resourceBreakdown', 'totalBytesTransferred', 'faviconProbeMs'],
+    },
+    {
+      icon: '🎙️',
+      title: 'Media Constraints',
+      keys: ['mediaConstraintCount', 'mediaConstraints'],
+    },
+    {
+      icon: '🧱',
+      title: 'Modern Web Platform APIs',
+      keys: ['visualViewportAvail', 'visualViewportScale', 'visualViewportSize', 'customElementsAvail', 'shadowDOMAvail', 'dialogElementAvail', 'popoverAvail', 'viewTransitionAvail', 'highlightAvail', 'trustedTypesAvail', 'sanitizerAvail', 'adoptedStylesAvail', 'cssTypedOMAvail', 'registerPropertyAvail', 'presentationAvail', 'fileSystemAccessAvail', 'contactPickerAvail', 'computePressureAvail', 'navigationAPIAvail', 'orientationLockAvail', 'cookieStoreAvail', 'webTransportAvail', 'reportingObserverAvail', 'contentVisibilityAvail'],
+    },
+    {
+      icon: '🏠',
+      title: 'App & Document State',
+      keys: ['isStandalone', 'isPWA', 'beforeInstallPromptAvail', 'documentReadyState', 'documentCharset', 'documentDir', 'documentContentType', 'documentDesignMode', 'documentLastModified', 'documentCompatMode'],
     },
     {
       icon: '⌨️',

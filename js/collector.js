@@ -3,7 +3,7 @@
    the browser exposes WITHOUT requiring any permission prompt.
 
    ALL DATA STAYS LOCAL.  Nothing is ever transmitted.
-   ~35 collectors for maximum fingerprint surface.
+   ~50 collectors for maximum fingerprint surface.
    ============================================================ */
 
 const Collector = (() => {
@@ -1048,7 +1048,387 @@ const Collector = (() => {
     });
   }
 
-  /* ====== 35. Comprehensive fingerprint hash ====== */
+  /* ====== 35. High-entropy UA Client Hints (Chromium) ====== */
+  function highEntropyHints() {
+    return new Promise(resolve => {
+      if (!navigator.userAgentData || !navigator.userAgentData.getHighEntropyValues) {
+        data.highEntropyHints = 'unavailable';
+        return resolve();
+      }
+      navigator.userAgentData.getHighEntropyValues([
+        'architecture', 'bitness', 'model', 'platformVersion',
+        'fullVersionList', 'wow64', 'formFactor',
+      ]).then(h => {
+        data.cpuArchitecture  = h.architecture || 'unknown';
+        data.cpuBitness       = h.bitness || 'unknown';
+        data.deviceModel      = h.model || 'unknown';
+        data.platformVersion  = h.platformVersion || 'unknown';
+        data.wow64            = h.wow64 ?? 'unknown';
+        data.formFactor       = h.formFactor?.join(', ') || 'unknown';
+        data.fullVersionList  = (h.fullVersionList || []).map(b => b.brand + ' v' + b.version).join(', ');
+        resolve();
+      }).catch(() => { data.highEntropyHints = 'denied'; resolve(); });
+    });
+  }
+
+  /* ====== 36. Emoji rendering fingerprint ====== */
+  function emojiFingerprint() {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 200; c.height = 40;
+      const ctx = c.getContext('2d');
+      ctx.textBaseline = 'top'; ctx.font = '24px serif';
+      // Different OS render these emojis very differently
+      ctx.fillText('🏴‍☠️🐱‍💻🫠🧑‍💻🏳️‍🌈🫶🏽', 0, 0);
+      data.emojiRenderHash = simpleHash(c.toDataURL());
+    } catch { data.emojiRenderHash = 'error'; }
+  }
+
+  /* ====== 37. Canvas blend modes & composite fingerprint ====== */
+  function canvasAdvanced() {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 60; c.height = 60;
+      const ctx = c.getContext('2d');
+
+      // Composite operations fingerprint
+      const ops = ['source-over','multiply','screen','overlay','darken','lighten','color-dodge','color-burn','hard-light','soft-light','difference','exclusion','hue','saturation','color','luminosity'];
+      const supportedOps = ops.filter(op => { ctx.globalCompositeOperation = op; return ctx.globalCompositeOperation === op; });
+      data.canvasCompositeOps = supportedOps.length + '/' + ops.length;
+
+      // Canvas filter support
+      ctx.filter = 'blur(1px)';
+      data.canvasFilterSupport = (ctx.filter === 'blur(1px)');
+
+      // Line dash fingerprint
+      ctx.setLineDash([5, 3]);
+      data.canvasLineDashSupport = ctx.getLineDash().length > 0;
+
+      // Context attributes
+      const settings = ctx.getContextAttributes?.() || {};
+      data.canvas2dAlpha        = settings.alpha ?? 'unknown';
+      data.canvas2dDesync       = settings.desynchronized ?? 'unknown';
+      data.canvas2dWillReadFreq = settings.willReadFrequently ?? 'unknown';
+
+      // OffscreenCanvas support
+      data.offscreenCanvasAvail = !!window.OffscreenCanvas;
+
+      // ImageBitmap
+      data.imageBitmapAvail = !!window.createImageBitmap;
+    } catch { data.canvasAdvanced = 'error'; }
+  }
+
+  /* ====== 38. WebGL shader precision format fingerprint ====== */
+  function webglPrecision() {
+    try {
+      const c = document.createElement('canvas');
+      const gl = c.getContext('webgl');
+      if (!gl) return;
+
+      const precisions = {};
+      const types = [gl.LOW_FLOAT, gl.MEDIUM_FLOAT, gl.HIGH_FLOAT, gl.LOW_INT, gl.MEDIUM_INT, gl.HIGH_INT];
+      const names = ['lowFloat', 'medFloat', 'highFloat', 'lowInt', 'medInt', 'highInt'];
+      const shaders = [gl.VERTEX_SHADER, gl.FRAGMENT_SHADER];
+      const shaderNames = ['vertex', 'fragment'];
+
+      shaderNames.forEach((sn, si) => {
+        names.forEach((pn, pi) => {
+          const p = gl.getShaderPrecisionFormat(shaders[si], types[pi]);
+          if (p) precisions[sn + '_' + pn] = `range:[${p.rangeMin},${p.rangeMax}] prec:${p.precision}`;
+        });
+      });
+      data.webglPrecisionFormats = Object.entries(precisions).map(([k,v]) => k + '=' + v).join(' | ');
+    } catch { data.webglPrecisionFormats = 'error'; }
+  }
+
+  /* ====== 39. Collation / string sorting fingerprint ====== */
+  function collationFingerprint() {
+    try {
+      const testStrings = ['ä', 'a', 'z', 'ö', 'ñ', 'ü', 'é', 'å', 'ø', '0', '9'];
+      data.collationOrder = [...testStrings].sort((a, b) => a.localeCompare(b)).join('');
+      data.collationHash  = simpleHash(data.collationOrder);
+
+      // Relative time format
+      try {
+        const rtf = new Intl.RelativeTimeFormat();
+        data.relTimeFormat = rtf.format(-1, 'day');
+      } catch { data.relTimeFormat = 'unavailable'; }
+
+      // Plural rules
+      try {
+        const pr = new Intl.PluralRules();
+        data.pluralCategories = pr.resolvedOptions().pluralCategories?.join(', ') || 'unknown';
+      } catch { data.pluralCategories = 'unavailable'; }
+
+      // List format
+      try {
+        const lf = new Intl.ListFormat();
+        data.listFormatSample = lf.format(['A', 'B', 'C']);
+      } catch { data.listFormatSample = 'unavailable'; }
+    } catch {}
+  }
+
+  /* ====== 40. JS language feature probing ====== */
+  function jsFeatures() {
+    data.bigIntSupport      = typeof BigInt !== 'undefined';
+    data.weakRefSupport     = typeof WeakRef !== 'undefined';
+    data.finalizationReg    = typeof FinalizationRegistry !== 'undefined';
+    data.structuredCloneAvail = typeof structuredClone === 'function';
+    data.atobAvail          = typeof atob === 'function';
+    data.proxySupport       = typeof Proxy !== 'undefined';
+    data.symbolSupport      = typeof Symbol !== 'undefined';
+    data.iteratorSupport    = typeof Symbol !== 'undefined' && typeof Symbol.iterator !== 'undefined';
+    data.asyncGenerators    = (function() { try { eval('(async function*(){})'); return true; } catch { return false; } })();
+    data.optionalChaining   = (function() { try { eval('null?.x'); return true; } catch { return false; } })();
+    data.nullishCoalescing  = (function() { try { eval('null ?? 1'); return true; } catch { return false; } })();
+    data.topLevelAwaitHint  = typeof document.currentScript === 'object' ? 'classic script' : 'module';
+    data.arrayAtSupport     = typeof Array.prototype.at === 'function';
+    data.objectHasOwn       = typeof Object.hasOwn === 'function';
+    data.errorCauseSupport  = (function() { try { new Error('', { cause: 'x' }); return true; } catch { return false; } })();
+    data.regexpLookbehind   = (function() { try { new RegExp('(?<=x)'); return true; } catch { return false; } })();
+
+    // SharedArrayBuffer (COOP/COEP indicator)
+    data.sharedArrayBufferAvail = typeof SharedArrayBuffer !== 'undefined';
+    data.atomicsAvail           = typeof Atomics !== 'undefined';
+
+    // Scheduler API
+    data.schedulerAvail = !!window.scheduler;
+
+    // Web Locks API
+    data.webLocksAvail = !!(navigator.locks);
+
+    // Compression Streams
+    data.compressionStreamAvail = !!window.CompressionStream;
+    data.decompStreamAvail      = !!window.DecompressionStream;
+  }
+
+  /* ====== 41. Shape Detection APIs ====== */
+  function shapeDetectionAPIs() {
+    data.barcodeDetectorAvail = !!window.BarcodeDetector;
+    data.faceDetectorAvail    = !!window.FaceDetector;
+    data.textDetectorAvail    = !!window.TextDetector;
+    data.eyeDropperAvail      = !!window.EyeDropper;
+
+    // Get supported barcode formats
+    if (window.BarcodeDetector && BarcodeDetector.getSupportedFormats) {
+      BarcodeDetector.getSupportedFormats().then(f => {
+        data.barcodeFormats = f.join(', ');
+      }).catch(() => {});
+    }
+  }
+
+  /* ====== 42. Web Vitals / Paint Timing ====== */
+  function paintTiming() {
+    try {
+      const paints = performance.getEntriesByType('paint');
+      paints.forEach(p => {
+        if (p.name === 'first-paint') data.firstPaint = Math.round(p.startTime) + ' ms';
+        if (p.name === 'first-contentful-paint') data.firstContentfulPaint = Math.round(p.startTime) + ' ms';
+      });
+
+      // Long Animation Frames (if available)
+      const longFrames = performance.getEntriesByType('long-animation-frame');
+      data.longAnimFrameCount = longFrames?.length ?? 'unavailable';
+
+      // LCP observer (already fired by now)
+      if (window.PerformanceObserver) {
+        try {
+          const lcpEntries = performance.getEntriesByType('largest-contentful-paint');
+          if (lcpEntries && lcpEntries.length) {
+            data.largestContentfulPaint = Math.round(lcpEntries[lcpEntries.length - 1].startTime) + ' ms';
+          }
+        } catch {}
+
+        // Layout shift
+        try {
+          const lsEntries = performance.getEntriesByType('layout-shift');
+          if (lsEntries && lsEntries.length) {
+            const cls = lsEntries.reduce((s, e) => s + (e.hadRecentInput ? 0 : e.value), 0);
+            data.cumulativeLayoutShift = cls.toFixed(4);
+          }
+        } catch {}
+      }
+    } catch {}
+  }
+
+  /* ====== 43. SVG rendering fingerprint ====== */
+  function svgFingerprint() {
+    try {
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      svg.setAttribute('width', '100'); svg.setAttribute('height', '50');
+      const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      text.setAttribute('x', '5'); text.setAttribute('y', '30');
+      text.setAttribute('font-size', '16'); text.setAttribute('font-family', 'serif');
+      text.textContent = 'Fingerprint';
+      svg.appendChild(text);
+      document.body.appendChild(svg);
+
+      const bbox = text.getBBox();
+      data.svgTextBBox = `${bbox.x.toFixed(2)},${bbox.y.toFixed(2)},${bbox.width.toFixed(2)},${bbox.height.toFixed(2)}`;
+      data.svgTextLength = text.getComputedTextLength()?.toFixed(2) || 'unknown';
+
+      document.body.removeChild(svg);
+    } catch { data.svgFingerprint = 'error'; }
+  }
+
+  /* ====== 44. Audio destinations & supported constraints ====== */
+  function audioDeep() {
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getSupportedConstraints) {
+        const c = navigator.mediaDevices.getSupportedConstraints();
+        data.mediaConstraints = Object.keys(c).filter(k => c[k]).join(', ');
+        data.mediaConstraintCount = Object.keys(c).filter(k => c[k]).length;
+      }
+    } catch {}
+  }
+
+  /* ====== 45. Window / Document feature detection ====== */
+  function windowFeatures() {
+    data.visualViewportAvail = !!window.visualViewport;
+    if (window.visualViewport) {
+      data.visualViewportScale = window.visualViewport.scale;
+      data.visualViewportSize  = window.visualViewport.width + ' × ' + window.visualViewport.height;
+    }
+    data.customElementsAvail = !!window.customElements;
+    data.shadowDOMAvail      = !!Element.prototype.attachShadow;
+    data.dialogElementAvail  = typeof HTMLDialogElement !== 'undefined';
+    data.popoverAvail        = typeof HTMLElement.prototype.showPopover === 'function';
+    data.viewTransitionAvail = !!document.startViewTransition;
+    data.highlightAvail      = !!CSS.highlights;
+    data.trustedTypesAvail   = !!window.TrustedTypes || !!window.trustedTypes;
+    data.sanitizerAvail      = !!window.Sanitizer;
+    data.adoptedStylesAvail  = !!document.adoptedStyleSheets;
+    data.cssTypedOMAvail     = !!window.CSSStyleValue;
+    data.registerPropertyAvail = !!(CSS.registerProperty);
+
+    // Presentation API
+    data.presentationAvail = !!navigator.presentation;
+
+    // File System Access API
+    data.fileSystemAccessAvail = !!window.showOpenFilePicker;
+
+    // Contact Picker API
+    data.contactPickerAvail = !!navigator.contacts;
+
+    // Compute Pressure API
+    data.computePressureAvail = !!window.PressureObserver;
+
+    // Navigation API
+    data.navigationAPIAvail = !!window.navigation;
+
+    // Screen orientation lock
+    data.orientationLockAvail = !!(screen.orientation && screen.orientation.lock);
+
+    // Cookie Store API
+    data.cookieStoreAvail = !!window.cookieStore;
+
+    // Web Transport
+    data.webTransportAvail = !!window.WebTransport;
+
+    // Reporting API
+    data.reportingObserverAvail = !!window.ReportingObserver;
+
+    // Content Visibility
+    data.contentVisibilityAvail = CSS.supports ? CSS.supports('content-visibility', 'auto') : 'unknown';
+  }
+
+  /* ====== 46. Colour profile & HDR capabilities ====== */
+  function colorProfile() {
+    try {
+      // Read a canvas pixel with specific color to detect profile
+      const c = document.createElement('canvas');
+      c.width = 1; c.height = 1;
+      const ctx = c.getContext('2d', { colorSpace: 'display-p3' });
+      if (ctx && ctx.getContextAttributes) {
+        data.canvasColorSpace = ctx.getContextAttributes().colorSpace || 'srgb';
+      } else {
+        data.canvasColorSpace = 'srgb (default)';
+      }
+    } catch { data.canvasColorSpace = 'srgb (fallback)'; }
+
+    // Screen color space hints via media queries
+    const gamuts = ['rec2020', 'p3', 'srgb'];
+    for (const g of gamuts) {
+      if (window.matchMedia(`(color-gamut: ${g})`).matches) {
+        data.maxColorGamut = g;
+        break;
+      }
+    }
+  }
+
+  /* ====== 47. Installed PWA / app state detection ====== */
+  function appState() {
+    data.isStandalone = window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+    data.isPWA        = data.isStandalone;
+    data.beforeInstallPromptAvail = 'onbeforeinstallprompt' in window;
+
+    // Document state
+    data.documentReadyState  = document.readyState;
+    data.documentCharset     = document.characterSet || document.charset;
+    data.documentDir         = document.dir || document.documentElement.dir || 'ltr';
+    data.documentContentType = document.contentType || 'unknown';
+    data.documentDesignMode  = document.designMode;
+    data.documentLastModified = document.lastModified;
+    data.documentCompatMode  = document.compatMode;
+  }
+
+  /* ====== 48. Resource / fetch timing for cross-site probing ====== */
+  function resourceProbing() {
+    return new Promise(resolve => {
+      // Try to measure timing of loading a well-known resource
+      // This can reveal if certain sites are cached (i.e. recently visited)
+      const resources = performance.getEntriesByType('resource');
+      const summary = {};
+      resources.forEach(r => {
+        const type = r.initiatorType || 'other';
+        summary[type] = (summary[type] || 0) + 1;
+      });
+      data.resourceBreakdown = Object.entries(summary).map(([k,v]) => k + ':' + v).join(', ');
+
+      // Total bytes transferred
+      const totalBytes = resources.reduce((s, r) => s + (r.transferSize || 0), 0);
+      data.totalBytesTransferred = totalBytes + ' bytes';
+
+      // Check for cached favicons hint
+      const imgTest = new Image();
+      const start = performance.now();
+      imgTest.onload = imgTest.onerror = () => {
+        data.faviconProbeMs = Math.round(performance.now() - start) + ' ms';
+        resolve();
+      };
+      // Load a known 1x1 px — timing reveals cache state
+      imgTest.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7?' + Date.now();
+
+      setTimeout(resolve, 2000);
+    });
+  }
+
+  /* ====== 49. CSS.escape / unique selectors ====== */
+  function cssAdvanced() {
+    data.cssEscapeAvail = typeof CSS.escape === 'function';
+    // More CSS feature checks
+    if (CSS.supports) {
+      data.cssHasSelector     = CSS.supports('selector(:has(*))');
+      data.cssIsSelector      = CSS.supports('selector(:is(*))');
+      data.cssWhereSelector   = CSS.supports('selector(:where(*))');
+      data.cssFocusVisible    = CSS.supports('selector(:focus-visible)');
+      data.cssFocusWithin     = CSS.supports('selector(:focus-within)');
+      data.cssLogicalProps     = CSS.supports('margin-inline-start', '0px');
+      data.cssClamp           = CSS.supports('width', 'clamp(1px, 2px, 3px)');
+      data.cssAtProperty      = CSS.supports('animation-timeline', 'scroll()');
+      data.cssScrollTimeline  = CSS.supports('animation-timeline', 'scroll()');
+      data.cssAnchorPos       = CSS.supports('position-anchor', '--x');
+      data.cssPopoverAttr     = CSS.supports('selector(:popover-open)');
+      data.cssIndeterminate   = CSS.supports('selector(:indeterminate)');
+      data.cssStartingStyle   = CSS.supports('selector(@starting-style)');
+      data.cssLightDark       = CSS.supports('color', 'light-dark(black, white)');
+      data.cssRelativeColor   = CSS.supports('color', 'rgb(from red r g b)');
+      data.cssContainerUnits  = CSS.supports('width', '1cqw');
+      data.cssMathFunctions   = CSS.supports('width', 'round(1px, 1px)');
+    }
+  }
+
+  /* ====== 50. Comprehensive fingerprint hash ====== */
   function computeFingerprint() {
     const signals = [
       data.userAgent, data.platform, data.language, data.timezone,
@@ -1060,6 +1440,9 @@ const Collector = (() => {
       data.detectedFonts, data.errorStackSignature,
       data.pointerType, data.hoverCapability,
       data.prefersColorScheme, data.hdrScreen,
+      data.emojiRenderHash, data.collationHash, data.svgTextBBox,
+      data.webglPrecisionFormats, data.cpuArchitecture, data.cpuBitness,
+      data.canvasColorSpace, data.maxColorGamut,
     ].join('|||');
     data.combinedFingerprint = simpleHash(signals);
 
@@ -1090,7 +1473,10 @@ const Collector = (() => {
     screenInfo();
     timezone();
     canvasFingerprint();
+    canvasAdvanced();
+    emojiFingerprint();
     webgl();
+    webglPrecision();
     detectFonts();
     storageProbes();
     pluginsProbe();
@@ -1098,12 +1484,18 @@ const Collector = (() => {
     navigation();
     mediaPrefs();
     cssFeatures();
+    cssAdvanced();
     mathFingerprint();
+    collationFingerprint();
+    jsFeatures();
+    shapeDetectionAPIs();
     touchDetails();
     protocolHandlers();
     performanceDeep();
+    paintTiming();
     motionSensors();
     textMetricsFingerprint();
+    svgFingerprint();
     clipboardState();
     webglRenderHash();
     networkDeep();
@@ -1111,6 +1503,10 @@ const Collector = (() => {
     visibilityState();
     cryptoFingerprint();
     keyboardInfo();
+    audioDeep();
+    windowFeatures();
+    colorProfile();
+    appState();
     behavioural();
 
     // Asynchronous
@@ -1123,6 +1519,8 @@ const Collector = (() => {
       speechVoices(),
       inputDevices(),
       storageFingerprint(),
+      highEntropyHints(),
+      resourceProbing(),
     ]);
 
     computeFingerprint();

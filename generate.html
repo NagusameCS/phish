@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Phish Training — Link Generator</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎣</text></svg>" />
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #0f0c29;
+      --bg2: #302b63;
+      --bg3: #24243e;
+      --card: rgba(255,255,255,.07);
+      --border: rgba(255,255,255,.12);
+      --accent: #4a90d9;
+      --accent-hover: #5fa0e9;
+      --success: #7bed9f;
+      --danger: #ff6b6b;
+      --text: #eee;
+      --text-muted: #999;
+      --mono: 'SF Mono', 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+    }
+
+    body {
+      min-height: 100vh;
+      background: linear-gradient(135deg, var(--bg), var(--bg2), var(--bg3));
+      color: var(--text);
+      font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+      line-height: 1.6;
+      padding: 0;
+    }
+
+    /* --- Header --- */
+    .hero {
+      text-align: center;
+      padding: 60px 20px 40px;
+    }
+    .hero-icon { font-size: 56px; margin-bottom: 12px; }
+    .hero h1 {
+      font-size: 32px;
+      font-weight: 700;
+      background: linear-gradient(135deg, #4a90d9, #7bed9f);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 8px;
+    }
+    .hero p { color: var(--text-muted); font-size: 15px; max-width: 520px; margin: 0 auto; }
+
+    /* --- Main card --- */
+    .main-card {
+      max-width: 640px;
+      margin: 0 auto 60px;
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 36px 32px;
+      backdrop-filter: blur(12px);
+    }
+
+    /* --- Form elements --- */
+    .field { margin-bottom: 20px; }
+    .field label {
+      display: block;
+      font-weight: 600;
+      font-size: 14px;
+      margin-bottom: 6px;
+      color: var(--text);
+    }
+    .field label small { color: var(--text-muted); font-weight: 400; }
+    .field input, .field select {
+      width: 100%;
+      padding: 11px 14px;
+      font-size: 15px;
+      font-family: inherit;
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      transition: border-color .2s, box-shadow .2s;
+      outline: none;
+    }
+    .field input::placeholder { color: #666; }
+    .field input:focus, .field select:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,144,217,.25);
+    }
+
+    /* --- Buttons --- */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 28px;
+      font-size: 15px;
+      font-weight: 600;
+      font-family: inherit;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background .2s, transform .1s;
+    }
+    .btn:active { transform: scale(.97); }
+    .btn-primary { background: var(--accent); color: #fff; }
+    .btn-primary:hover { background: var(--accent-hover); }
+    .btn-dark { background: #333; color: #fff; }
+    .btn-dark:hover { background: #444; }
+    .btn-sm { padding: 8px 18px; font-size: 13px; }
+
+    /* --- Divider --- */
+    .divider {
+      height: 1px;
+      background: var(--border);
+      margin: 24px 0;
+    }
+
+    /* --- Result area --- */
+    .result { display: none; }
+    .result.visible { display: block; }
+    .result-label { font-weight: 600; font-size: 14px; margin-bottom: 8px; }
+
+    .link-box {
+      padding: 14px 16px;
+      background: rgba(0,0,0,.3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      font-family: var(--mono);
+      font-size: 13px;
+      word-break: break-all;
+      user-select: all;
+      cursor: text;
+      color: var(--success);
+      line-height: 1.5;
+    }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .copied-toast {
+      display: inline-block;
+      color: var(--success);
+      font-size: 13px;
+      font-weight: 600;
+      opacity: 0;
+      transition: opacity .3s;
+      margin-left: 8px;
+    }
+    .copied-toast.show { opacity: 1; }
+
+    /* --- Preview area --- */
+    .preview-section {
+      margin-top: 24px;
+      padding: 20px;
+      background: rgba(0,0,0,.25);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+    }
+    .preview-section h3 {
+      font-size: 14px;
+      color: var(--text-muted);
+      margin-bottom: 12px;
+    }
+    .preview-grid {
+      display: grid;
+      grid-template-columns: 120px 1fr;
+      gap: 6px 12px;
+      font-size: 13px;
+    }
+    .preview-grid dt { color: var(--text-muted); }
+    .preview-grid dd { color: var(--text); font-family: var(--mono); font-size: 12px; }
+
+    /* --- Batch section --- */
+    .batch-section { margin-top: 28px; }
+    .batch-section h3 {
+      font-size: 15px;
+      font-weight: 600;
+      margin-bottom: 12px;
+    }
+    .batch-section textarea {
+      width: 100%;
+      height: 120px;
+      padding: 12px 14px;
+      font-size: 13px;
+      font-family: var(--mono);
+      background: rgba(255,255,255,.06);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--text);
+      resize: vertical;
+      outline: none;
+    }
+    .batch-section textarea:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(74,144,217,.25);
+    }
+    .batch-section textarea::placeholder { color: #555; }
+    .batch-output {
+      margin-top: 12px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: var(--mono);
+      font-size: 12px;
+      line-height: 1.8;
+      color: var(--success);
+      word-break: break-all;
+    }
+    .batch-output .line {
+      padding: 4px 0;
+      border-bottom: 1px solid rgba(255,255,255,.05);
+    }
+
+    /* --- Info callout --- */
+    .callout {
+      display: flex;
+      gap: 12px;
+      padding: 16px;
+      background: rgba(74,144,217,.1);
+      border: 1px solid rgba(74,144,217,.25);
+      border-radius: 10px;
+      margin-top: 24px;
+      font-size: 13px;
+      line-height: 1.5;
+      color: #b0c9e8;
+    }
+    .callout-icon { font-size: 20px; flex-shrink: 0; margin-top: 2px; }
+
+    /* --- Footer --- */
+    .footer {
+      text-align: center;
+      padding: 20px;
+      font-size: 12px;
+      color: #555;
+    }
+    .footer a { color: var(--accent); text-decoration: none; }
+    .footer a:hover { text-decoration: underline; }
+
+    /* --- QR Code --- */
+    .qr-container {
+      margin-top: 16px;
+      text-align: center;
+    }
+    .qr-container canvas {
+      background: #fff;
+      border-radius: 8px;
+      padding: 12px;
+    }
+
+    /* Responsive */
+    @media (max-width: 680px) {
+      .main-card { margin: 0 12px 40px; padding: 24px 18px; }
+      .hero { padding: 40px 16px 28px; }
+      .hero h1 { font-size: 26px; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="hero">
+    <div class="hero-icon">🎣</div>
+    <h1>Phish Training — Link Generator</h1>
+    <p>Generate a training link that impersonates any domain. Send it to participants — all data stays in their browser. Nothing is ever transmitted.</p>
+  </div>
+
+  <div class="main-card">
+
+    <!-- Single link generator -->
+    <div class="field">
+      <label>Target domain <small>(required)</small></label>
+      <input id="genDomain" type="text" placeholder="e.g. asf.edu.mx, company.com" autofocus />
+    </div>
+
+    <div class="field">
+      <label>Organization name <small>(optional — auto-derived from domain)</small></label>
+      <input id="genName" type="text" placeholder="e.g. ASF Portal, Contoso" />
+    </div>
+
+    <div class="field">
+      <label>Path <small>(optional)</small></label>
+      <input id="genPath" type="text" placeholder="/login" value="/login" />
+    </div>
+
+    <button id="genBtn" class="btn btn-primary">🔗 Generate Link</button>
+
+    <!-- Result -->
+    <div id="genResult" class="result">
+      <div class="divider"></div>
+      <div class="result-label">Your training link:</div>
+      <div id="genLink" class="link-box"></div>
+      <div class="result-actions">
+        <button id="genCopy" class="btn btn-dark btn-sm">📋 Copy Link</button>
+        <button id="genOpen" class="btn btn-dark btn-sm">🔍 Test in New Tab</button>
+        <span id="copiedToast" class="copied-toast">Copied!</span>
+      </div>
+
+      <!-- Link breakdown -->
+      <div class="preview-section">
+        <h3>Link Breakdown</h3>
+        <dl class="preview-grid">
+          <dt>Base URL</dt>      <dd id="prevBase">—</dd>
+          <dt>Hash</dt>          <dd id="prevHash">—</dd>
+          <dt>Decoded</dt>       <dd id="prevDecoded">—</dd>
+          <dt>Domain</dt>        <dd id="prevDomain">—</dd>
+          <dt>Org Name</dt>      <dd id="prevOrg">—</dd>
+          <dt>Path</dt>          <dd id="prevPath">—</dd>
+        </dl>
+      </div>
+    </div>
+
+    <!-- Batch generator -->
+    <div class="divider"></div>
+    <div class="batch-section">
+      <h3>📋 Batch Generate</h3>
+      <p style="font-size:13px;color:var(--text-muted);margin-bottom:12px;">
+        Enter one domain per line to generate multiple links at once.
+      </p>
+      <textarea id="batchInput" placeholder="asf.edu.mx&#10;contoso.com&#10;example.org"></textarea>
+      <div style="margin-top:10px;display:flex;gap:10px;flex-wrap:wrap;">
+        <button id="batchBtn" class="btn btn-primary btn-sm">🚀 Generate All</button>
+        <button id="batchCopy" class="btn btn-dark btn-sm" style="display:none;">📋 Copy All</button>
+      </div>
+      <div id="batchOutput" class="batch-output"></div>
+    </div>
+
+    <!-- Info callout -->
+    <div class="callout">
+      <span class="callout-icon">ℹ️</span>
+      <div>
+        <strong>How it works:</strong> The target domain is Base64URL-encoded into the URL hash fragment.
+        When a participant opens the link, the page decodes the hash and renders a convincing fake login page
+        for that domain. After a brief delay (or form submit), a reveal page shows them every piece of
+        data their browser exposed — <strong>all without ever leaving their machine</strong>.
+        <br><br>
+        <strong>~50 data collectors</strong> run silently: canvas fingerprints, WebGL GPU info, audio
+        fingerprints, installed fonts, timezone, screen details, hardware specs, network info, WebRTC
+        leak detection, typing patterns, and much more.
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Phish Training Tool &mdash; <a href="https://github.com/NagusameCS/phish" target="_blank">GitHub</a>
+  </div>
+
+  <!-- Load config.js for the Base64URL helpers -->
+  <script src="js/config.js"></script>
+  <script>
+    (() => {
+      const $ = id => document.getElementById(id);
+
+      /* --- Base URL for generated links (points to index.html) --- */
+      const base = location.origin + location.pathname.replace(/generate\.html$/, '');
+
+      /* =========== Single link generator =========== */
+      $('genBtn').addEventListener('click', generateSingle);
+      $('genDomain').addEventListener('keydown', e => { if (e.key === 'Enter') generateSingle(); });
+
+      function generateSingle() {
+        const domain = $('genDomain').value.trim();
+        if (!domain) { $('genDomain').focus(); $('genDomain').style.borderColor = '#ff6b6b'; return; }
+        $('genDomain').style.borderColor = '';
+
+        const name = $('genName').value.trim() || undefined;
+        const path = $('genPath').value.trim() || undefined;
+
+        const hash = PhishConfig.generateHash(domain, name, path);
+        const url  = base + '#' + hash;
+
+        // Show result
+        $('genLink').textContent = url;
+        $('genResult').classList.add('visible');
+
+        // Breakdown
+        $('prevBase').textContent = base;
+        $('prevHash').textContent = hash;
+        $('prevDecoded').textContent = PhishConfig.b64urlDecode(hash);
+        $('prevDomain').textContent = domain;
+        $('prevOrg').textContent = name || '(auto: ' + domain.split('.').slice(-2, -1)[0] + ')';
+        $('prevPath').textContent = path || '/login';
+
+        // Scroll to result
+        $('genResult').scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+      }
+
+      /* --- Copy single link --- */
+      $('genCopy').addEventListener('click', () => {
+        const text = $('genLink').textContent;
+        navigator.clipboard.writeText(text).then(() => {
+          $('copiedToast').classList.add('show');
+          setTimeout(() => $('copiedToast').classList.remove('show'), 2000);
+        });
+      });
+
+      /* --- Open in new tab --- */
+      $('genOpen').addEventListener('click', () => {
+        const text = $('genLink').textContent;
+        if (text) window.open(text, '_blank');
+      });
+
+      /* =========== Batch generator =========== */
+      $('batchBtn').addEventListener('click', () => {
+        const lines = $('batchInput').value.trim().split('\n')
+          .map(l => l.trim()).filter(Boolean);
+        if (!lines.length) return;
+
+        const output = $('batchOutput');
+        output.innerHTML = '';
+
+        const urls = [];
+        for (const line of lines) {
+          // Accept "domain" or "domain | org name"
+          const parts = line.split('|').map(s => s.trim());
+          const domain = parts[0];
+          const name = parts[1] || undefined;
+          const hash = PhishConfig.generateHash(domain, name);
+          const url = base + '#' + hash;
+          urls.push(url);
+
+          const div = document.createElement('div');
+          div.className = 'line';
+          div.textContent = url;
+          output.appendChild(div);
+        }
+
+        $('batchCopy').style.display = '';
+        $('batchCopy').onclick = () => {
+          navigator.clipboard.writeText(urls.join('\n')).then(() => {
+            $('batchCopy').textContent = '✓ Copied All';
+            setTimeout(() => { $('batchCopy').textContent = '📋 Copy All'; }, 2000);
+          });
+        };
+      });
+
+    })();
+  </script>
+</body>
+</html>
