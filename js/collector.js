@@ -265,7 +265,7 @@ const Collector = (() => {
 
         setTimeout(() => {
           if (!data.audioFingerprint) { data.audioFingerprint = 'timeout'; resolve(); }
-        }, 2000);
+        }, 800);
       } catch (e) {
         data.audioFingerprint = 'error';
         resolve();
@@ -321,10 +321,10 @@ const Collector = (() => {
           if (!data.localIPs.length) {
             data.localIPs = [...ips].length ? [...ips] : ['timeout'];
             data.iceCandidates = candidates.length ? candidates.join('\n') : 'timeout';
-            pc.close();
+            try { pc.close(); } catch {}
             resolve();
           }
-        }, 5000);
+        }, 1500);
       } catch (e) {
         data.localIPs = ['error'];
         resolve();
@@ -403,27 +403,23 @@ const Collector = (() => {
     span.style.visibility = 'hidden';
 
     const baseWidths = {};
+    body.appendChild(span);
     baseFonts.forEach(f => {
       span.style.fontFamily = f;
-      body.appendChild(span);
       baseWidths[f] = { w: span.offsetWidth, h: span.offsetHeight };
-      body.removeChild(span);
     });
 
     const detected = [];
     testFonts.forEach(font => {
       for (const base of baseFonts) {
         span.style.fontFamily = `"${font}", ${base}`;
-        body.appendChild(span);
-        const w = span.offsetWidth;
-        const h = span.offsetHeight;
-        body.removeChild(span);
-        if (w !== baseWidths[base].w || h !== baseWidths[base].h) {
+        if (span.offsetWidth !== baseWidths[base].w || span.offsetHeight !== baseWidths[base].h) {
           detected.push(font);
           break;
         }
       }
     });
+    body.removeChild(span);
 
     data.detectedFonts = detected.join(', ') || 'none detected';
     data.fontCount     = detected.length;
@@ -686,14 +682,14 @@ const Collector = (() => {
       baitScript.innerHTML = '<div class="ad-wrapper"><div class="ad_unit"></div></div>';
       document.body.appendChild(baitScript);
 
-      setTimeout(() => {
+      requestAnimationFrame(() => {
         const divBlocked = (bait.offsetHeight === 0 || bait.clientHeight === 0);
         const scriptBlocked = (baitScript.offsetHeight === 0 || !baitScript.querySelector('.ad_unit'));
         data.adBlocker = (divBlocked || scriptBlocked) ? 'likely active' : 'not detected';
         bait.remove();
         baitScript.remove();
         resolve();
-      }, 300);
+      });
     });
   }
 
@@ -710,14 +706,11 @@ const Collector = (() => {
       'window-management', 'local-fonts',
     ];
     const results = {};
-    for (const name of names) {
-      try {
-        const s = await navigator.permissions.query({ name });
-        results[name] = s.state;
-      } catch {
-        results[name] = 'unsupported';
-      }
-    }
+    await Promise.all(names.map(name =>
+      navigator.permissions.query({ name })
+        .then(s => { results[name] = s.state; })
+        .catch(() => { results[name] = 'unsupported'; })
+    ));
     data.permissions = results;
   }
 
@@ -778,7 +771,7 @@ const Collector = (() => {
         grab();
         if (!data.speechVoices) {
           speechSynthesis.onvoiceschanged = () => { grab(); resolve(); };
-          setTimeout(() => { if (!data.speechVoices) { data.speechVoices = 'none loaded'; resolve(); } }, 2000);
+          setTimeout(() => { if (!data.speechVoices) { data.speechVoices = 'none loaded'; resolve(); } }, 600);
         }
       } catch { data.speechVoices = 'error'; resolve(); }
     });
@@ -1397,9 +1390,9 @@ const Collector = (() => {
         resolve();
       };
       // Load a known 1x1 px — timing reveals cache state
-      imgTest.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7?' + Date.now();
+      imgTest.src = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
 
-      setTimeout(resolve, 2000);
+      setTimeout(resolve, 500);
     });
   }
 
@@ -1509,7 +1502,7 @@ const Collector = (() => {
     appState();
     behavioural();
 
-    // Asynchronous
+    // Asynchronous (all in parallel)
     await Promise.all([
       audioFingerprint(),
       webrtcIPs(),
@@ -1521,7 +1514,7 @@ const Collector = (() => {
       storageFingerprint(),
       highEntropyHints(),
       resourceProbing(),
-    ]);
+    ]).catch(() => {});
 
     computeFingerprint();
     return data;

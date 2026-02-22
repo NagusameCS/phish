@@ -73,7 +73,7 @@
 
   // Auto-reveal after a delay
   // Longer timeout when showing real site (user needs time to browse)
-  const revealDelay = mode === 'fake' ? 15000 : 20000;
+  const revealDelay = mode === 'fake' ? 12000 : 18000;
   setTimeout(doReveal, revealDelay);
 
   /* ---- 5. "Run Again" button ---- */
