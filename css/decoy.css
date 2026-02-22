@@ -8,12 +8,16 @@
   padding: 0;
 }
 
+html {
+  color-scheme: light dark;
+}
+
 html, body {
   height: 100%;
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen,
     Ubuntu, Cantarell, "Helvetica Neue", Arial, sans-serif;
-  background: #fff;
-  color: #333;
+  background: Canvas;
+  color: CanvasText;
 }
 
 /* ---- Decoy layer ---- */
@@ -138,7 +142,7 @@ html, body {
   height: 100vh;
   border: none;
   z-index: 500;
-  background: #fff;
+  background: Canvas;
   opacity: 0;
   transition: opacity .5s ease;
 }
@@ -146,23 +150,7 @@ html, body {
   opacity: 1;
 }
 
-/* ---- Loading bar (animated stripe at top) ---- */
-.loading-bar {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 3px;
-  z-index: 1001;
-  background: linear-gradient(90deg, transparent 0%, #4a90d9 30%, #7bed9f 60%, transparent 100%);
-  background-size: 200% 100%;
-  animation: loadSlide 1.4s ease-in-out infinite;
-}
 
-@keyframes loadSlide {
-  0%   { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
 
 /* ---- Spinner overlay (shown while collecting) ---- */
 .spinner-overlay {

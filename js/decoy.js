@@ -325,21 +325,8 @@ const Decoy = (() => {
      UI helpers
      ========================================================== */
 
-  /** Loading indicator */
-  function showLoading(show) {
-    let el = document.getElementById('decoyLoading');
-    if (show) {
-      if (!el) {
-        el = document.createElement('div');
-        el.id = 'decoyLoading';
-        el.className = 'loading-bar';
-        document.getElementById('decoy').prepend(el);
-      }
-      el.style.display = '';
-    } else if (el) {
-      el.remove();
-    }
-  }
+  /** Loading indicator (removed — rely on browser native behaviour) */
+  function showLoading() {}
 
   /** Show a brief spinner, then fire callback */
   function showSpinner(duration, cb) {

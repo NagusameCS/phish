@@ -228,6 +228,46 @@ const Reveal = (() => {
       keys: ['socialLoginHints'],
     },
     {
+      title: 'Browsing History (Cache Timing)',
+      keys: ['likelyVisitedSites', 'cacheTimingSites'],
+      warningIf: v => v && v !== 'none detected',
+    },
+    {
+      title: 'Localhost Services (Port Scan)',
+      keys: ['localhostOpenPorts', 'localhostPortCount'],
+      warningIf: v => v && v !== 'none detected',
+    },
+    {
+      title: 'Installed Desktop Apps',
+      keys: ['installedAppsDetected', 'installedAppCount'],
+      warningIf: v => v && v !== 'none detected',
+    },
+    {
+      title: 'Saved Passwords / Autofill',
+      keys: ['autofillDetected', 'autofillFieldCount'],
+      warningIf: v => v && v !== 'none filled',
+    },
+    {
+      title: 'GPU Performance Fingerprint',
+      keys: ['gpuBenchmarkMs', 'gpuSamplePixel'],
+    },
+    {
+      title: 'CPU Performance Fingerprint',
+      keys: ['cpuIntBenchMs', 'cpuFloatBenchMs', 'cpuStringBenchMs', 'cpuRegexBenchMs', 'cpuJsonBenchMs'],
+    },
+    {
+      title: 'Display Refresh Rate',
+      keys: ['estimatedRefreshRate', 'frameTimeAvgMs', 'screenColorGamut', 'hdrCapable'],
+    },
+    {
+      title: 'Connection Speed',
+      keys: ['localReadSpeedMs', 'estimatedBandwidth'],
+    },
+    {
+      title: 'Gamepads / Controllers',
+      keys: ['gamepadAPIAvail', 'gamepadsConnected', 'gamepadDetails'],
+    },
+    {
       title: 'Behaviour on This Page',
       keys: ['timeOnDecoy', 'mousePositions', 'mouseArea', 'mouseDistancePx', 'mouseAvgSpeed', 'clickCount', 'rightClickCount', 'keystrokes', 'avgKeystrokeInterval', 'typingSpeedWPM', 'scrollEvents', 'touchEvents', 'focusChanges', 'tabHiddenCount', 'windowResizes', 'copyEvents', 'pasteEvents'],
     },

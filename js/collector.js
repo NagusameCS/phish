@@ -1516,10 +1516,22 @@ const Collector = (() => {
   function socialLoginDetect() {
     return new Promise(resolve => {
       const services = [
-        { name: 'Google',   url: 'https://accounts.google.com/ServiceLogin?passive=true' },
-        { name: 'Facebook', url: 'https://www.facebook.com/login/device-based/regular/login/?login_attempt=1' },
-        { name: 'Twitter',  url: 'https://abs.twimg.com/responsive-web/client-web/shared~loader.LoginForm.css' },
-        { name: 'GitHub',   url: 'https://github.githubassets.com/favicons/favicon.svg' },
+        { name: 'Google',     url: 'https://accounts.google.com/ServiceLogin?passive=true' },
+        { name: 'Facebook',   url: 'https://www.facebook.com/login/device-based/regular/login/?login_attempt=1' },
+        { name: 'Twitter',    url: 'https://abs.twimg.com/responsive-web/client-web/shared~loader.LoginForm.css' },
+        { name: 'GitHub',     url: 'https://github.githubassets.com/favicons/favicon.svg' },
+        { name: 'LinkedIn',   url: 'https://static.licdn.com/aero-v1/sc/h/al2o9zrvru7aqj8e1x2em8i' },
+        { name: 'Reddit',     url: 'https://www.redditstatic.com/desktop2x/img/favicon/android-icon-192x192.png' },
+        { name: 'Amazon',     url: 'https://www.amazon.com/favicon.ico' },
+        { name: 'Microsoft',  url: 'https://logincdn.msauth.net/shared/1.0/content/js/OldConvergedLogin_PCore.js' },
+        { name: 'Netflix',    url: 'https://assets.nflxext.com/us/ffe/siteui/common/icons/nficon2016.ico' },
+        { name: 'Spotify',    url: 'https://open.spotifycdn.com/cdn/images/favicon.0f31d2ea.ico' },
+        { name: 'Twitch',     url: 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png' },
+        { name: 'Discord',    url: 'https://discord.com/assets/847541504914fd33810e70a0ea73177e.ico' },
+        { name: 'PayPal',     url: 'https://www.paypalobjects.com/webstatic/icon/pp258.png' },
+        { name: 'StackOverflow', url: 'https://cdn.sstatic.net/Sites/stackoverflow/Img/favicon.ico' },
+        { name: 'YouTube',    url: 'https://www.youtube.com/s/desktop/player/www-player.css' },
+        { name: 'Instagram',  url: 'https://static.cdninstagram.com/rsrc.php/v3/yI/r/VsNE-OHk_8a.png' },
       ];
       const results = {};
       let pending = services.length;
@@ -1534,7 +1546,7 @@ const Collector = (() => {
         const img = new Image();
         img.onload = () => {
           const ms = performance.now() - start;
-          results[svc.name] = ms < 50 ? 'cached (likely visited)' : ms + 'ms';
+          results[svc.name] = ms < 50 ? 'cached (likely visited)' : ms.toFixed(0) + 'ms';
           done();
         };
         img.onerror = () => {
@@ -1548,7 +1560,394 @@ const Collector = (() => {
     });
   }
 
-  /* ====== 54. Comprehensive fingerprint hash ====== */
+  /* ====== 55. Localhost port scanning (detect running services) ====== */
+  function localhostPortScan() {
+    // Probes common local ports by timing fetch failures.
+    // Open ports reject differently than closed ports — timing reveals what's running.
+    const ports = [
+      { port: 80,    name: 'HTTP' },
+      { port: 443,   name: 'HTTPS' },
+      { port: 3000,  name: 'Node/React dev' },
+      { port: 3306,  name: 'MySQL' },
+      { port: 4200,  name: 'Angular dev' },
+      { port: 4444,  name: 'Selenium' },
+      { port: 5000,  name: 'Flask/API' },
+      { port: 5173,  name: 'Vite dev' },
+      { port: 5432,  name: 'PostgreSQL' },
+      { port: 5500,  name: 'Live Server' },
+      { port: 5900,  name: 'VNC' },
+      { port: 6379,  name: 'Redis' },
+      { port: 8000,  name: 'Django/Python' },
+      { port: 8080,  name: 'Proxy/Tomcat' },
+      { port: 8443,  name: 'Alt HTTPS' },
+      { port: 8888,  name: 'Jupyter' },
+      { port: 9090,  name: 'Prometheus' },
+      { port: 9150,  name: 'Tor Browser' },
+      { port: 9200,  name: 'Elasticsearch' },
+      { port: 27017, name: 'MongoDB' },
+    ];
+    return new Promise(resolve => {
+      const openPorts = [];
+      let pending = ports.length;
+      const done = () => { if (--pending <= 0) {
+        data.localhostOpenPorts = openPorts.length ? openPorts.join(', ') : 'none detected';
+        data.localhostPortCount = openPorts.length;
+        resolve();
+      }};
+      ports.forEach(p => {
+        const start = performance.now();
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => { ctrl.abort(); done(); }, 300);
+        fetch('http://127.0.0.1:' + p.port, { mode: 'no-cors', signal: ctrl.signal })
+          .then(() => {
+            clearTimeout(timer);
+            openPorts.push(p.port + ' (' + p.name + ')');
+            done();
+          })
+          .catch(e => {
+            clearTimeout(timer);
+            const ms = performance.now() - start;
+            // Very fast errors (~<20ms) usually mean "connection refused" (port closed).
+            // Slower errors (~100ms+) often mean something is listening but refused CORS.
+            if (ms > 40 && e.name !== 'AbortError') {
+              openPorts.push(p.port + ' (' + p.name + ' - likely)');
+            }
+            done();
+          });
+      });
+      setTimeout(() => { if (pending > 0) { pending = 0; resolve(); } }, 3000);
+    });
+  }
+
+  /* ====== 56. GPU performance benchmark ====== */
+  function gpuBenchmark() {
+    try {
+      const c = document.createElement('canvas');
+      c.width = 256; c.height = 256;
+      const gl = c.getContext('webgl');
+      if (!gl) { data.gpuBenchmarkMs = 'WebGL unavailable'; return; }
+
+      // Render many draw calls to measure GPU throughput
+      const vs = gl.createShader(gl.VERTEX_SHADER);
+      gl.shaderSource(vs, 'attribute vec2 p;void main(){gl_Position=vec4(p,0,1);gl_PointSize=1.0;}');
+      gl.compileShader(vs);
+      const fs = gl.createShader(gl.FRAGMENT_SHADER);
+      gl.shaderSource(fs, 'precision mediump float;void main(){gl_FragColor=vec4(sin(gl_FragCoord.x*0.1),cos(gl_FragCoord.y*0.1),0.5,1);}');
+      gl.compileShader(fs);
+      const prog = gl.createProgram();
+      gl.attachShader(prog, vs); gl.attachShader(prog, fs);
+      gl.linkProgram(prog); gl.useProgram(prog);
+
+      const buf = gl.createBuffer();
+      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
+      const verts = new Float32Array(2000);
+      for (let i = 0; i < 2000; i++) verts[i] = Math.random() * 2 - 1;
+      gl.bufferData(gl.ARRAY_BUFFER, verts, gl.STATIC_DRAW);
+      const loc = gl.getAttribLocation(prog, 'p');
+      gl.enableVertexAttribArray(loc);
+      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
+
+      const start = performance.now();
+      for (let i = 0; i < 50; i++) {
+        gl.clear(gl.COLOR_BUFFER_BIT);
+        gl.drawArrays(gl.POINTS, 0, 1000);
+      }
+      gl.finish();
+      data.gpuBenchmarkMs = (performance.now() - start).toFixed(2) + ' ms (50 draws)';
+
+      // Read back a pixel — forces GPU pipeline flush
+      const px = new Uint8Array(4);
+      gl.readPixels(128, 128, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      data.gpuSamplePixel = Array.from(px).join(',');
+
+      gl.deleteProgram(prog); gl.deleteShader(vs); gl.deleteShader(fs); gl.deleteBuffer(buf);
+    } catch (e) { data.gpuBenchmarkMs = 'error: ' + e.message; }
+  }
+
+  /* ====== 57. Connection speed estimate ====== */
+  function connectionSpeedEstimate() {
+    return new Promise(resolve => {
+      try {
+        // Download a known-size resource and measure throughput
+        const size = 50000; // ~50KB
+        const blob = new Blob([new ArrayBuffer(size)]);
+        const url = URL.createObjectURL(blob);
+        const start = performance.now();
+        fetch(url).then(r => r.blob()).then(() => {
+          const elapsed = performance.now() - start;
+          URL.revokeObjectURL(url);
+          data.localReadSpeedMs = elapsed.toFixed(2) + ' ms for 50KB';
+
+          // Also measure network hint from Navigation Timing
+          const nav = performance.getEntriesByType('navigation')[0];
+          if (nav) {
+            const downloadTime = nav.responseEnd - nav.responseStart;
+            const pageSize = nav.decodedBodySize || 0;
+            if (downloadTime > 0 && pageSize > 0) {
+              const bps = (pageSize * 8) / (downloadTime / 1000);
+              if (bps > 1e6) data.estimatedBandwidth = (bps / 1e6).toFixed(1) + ' Mbps';
+              else data.estimatedBandwidth = (bps / 1e3).toFixed(0) + ' Kbps';
+            }
+          }
+          resolve();
+        }).catch(() => { resolve(); });
+      } catch { resolve(); }
+    });
+  }
+
+  /* ====== 58. Gamepad fingerprint ====== */
+  function gamepadFingerprint() {
+    try {
+      const gps = navigator.getGamepads ? navigator.getGamepads() : [];
+      const connected = [];
+      for (let i = 0; i < gps.length; i++) {
+        if (gps[i]) {
+          connected.push({
+            id: gps[i].id,
+            buttons: gps[i].buttons.length,
+            axes: gps[i].axes.length,
+            mapping: gps[i].mapping || 'nonstandard',
+            vibration: gps[i].vibrationActuator ? 'yes' : 'no',
+          });
+        }
+      }
+      data.gamepadsConnected = connected.length;
+      if (connected.length) {
+        data.gamepadDetails = connected.map(g => g.id + ' (' + g.buttons + 'btn/' + g.axes + 'axes/' + g.mapping + ')').join('; ');
+      }
+      data.gamepadAPIAvail = !!navigator.getGamepads;
+    } catch (e) { data.gamepadAPIAvail = false; }
+  }
+
+  /* ====== 59. Autofill / credential detection ====== */
+  function autofillDetect() {
+    return new Promise(resolve => {
+      try {
+        // Create hidden form fields with common autocomplete names.
+        // If the browser auto-fills them, it reveals saved credentials exist for this or similar domains.
+        const container = document.createElement('div');
+        container.style.cssText = 'position:fixed;top:-9999px;left:-9999px;opacity:0;pointer-events:none;';
+        container.innerHTML = `
+          <form>
+            <input type="email" name="email" autocomplete="email" id="_af_email">
+            <input type="text" name="username" autocomplete="username" id="_af_user">
+            <input type="password" name="password" autocomplete="current-password" id="_af_pass">
+            <input type="text" name="name" autocomplete="name" id="_af_name">
+            <input type="tel" name="phone" autocomplete="tel" id="_af_phone">
+            <input type="text" name="address" autocomplete="street-address" id="_af_addr">
+            <input type="text" name="cc-number" autocomplete="cc-number" id="_af_cc">
+            <input type="text" name="cc-name" autocomplete="cc-name" id="_af_ccname">
+          </form>`;
+        document.body.appendChild(container);
+
+        // Give browser a moment to autofill
+        setTimeout(() => {
+          const fields = {
+            email: document.getElementById('_af_email'),
+            username: document.getElementById('_af_user'),
+            password: document.getElementById('_af_pass'),
+            name: document.getElementById('_af_name'),
+            phone: document.getElementById('_af_phone'),
+            address: document.getElementById('_af_addr'),
+            creditCard: document.getElementById('_af_cc'),
+            ccName: document.getElementById('_af_ccname'),
+          };
+          const filled = [];
+          for (const [label, el] of Object.entries(fields)) {
+            if (el && el.value) filled.push(label);
+          }
+          data.autofillDetected = filled.length ? filled.join(', ') : 'none filled';
+          data.autofillFieldCount = filled.length;
+
+          // Check for :-webkit-autofill pseudo-class (Chrome)
+          try {
+            const autofilled = container.querySelectorAll('input:-webkit-autofill');
+            if (autofilled.length) data.autofillDetected += ' (+' + autofilled.length + ' webkit-autofill)';
+          } catch {}
+
+          container.remove();
+          resolve();
+        }, 600);
+      } catch { resolve(); }
+    });
+  }
+
+  /* ====== 60. CPU / JS benchmark fingerprint ====== */
+  function cpuBenchmark() {
+    try {
+      // Measure time to do intensive operations — varies by CPU/arch
+      const iterations = 100000;
+
+      // Integer math benchmark
+      const s1 = performance.now();
+      let x = 0;
+      for (let i = 0; i < iterations; i++) x = (x * 1103515245 + 12345) & 0x7fffffff;
+      data.cpuIntBenchMs = (performance.now() - s1).toFixed(2) + ' ms';
+
+      // Floating point benchmark
+      const s2 = performance.now();
+      let y = 1.0;
+      for (let i = 0; i < iterations; i++) y = Math.sin(y) * Math.cos(y) + Math.sqrt(Math.abs(y));
+      data.cpuFloatBenchMs = (performance.now() - s2).toFixed(2) + ' ms';
+
+      // String manipulation benchmark
+      const s3 = performance.now();
+      let s = '';
+      for (let i = 0; i < 10000; i++) s += String.fromCharCode(65 + (i % 26));
+      const h = s.length; // prevent optimization
+      data.cpuStringBenchMs = (performance.now() - s3).toFixed(2) + ' ms';
+
+      // Regex benchmark
+      const s4 = performance.now();
+      const re = /(\w+)\s+\1/g;
+      for (let i = 0; i < 5000; i++) re.test('the the quick brown fox fox');
+      data.cpuRegexBenchMs = (performance.now() - s4).toFixed(2) + ' ms';
+
+      // JSON parse benchmark
+      const s5 = performance.now();
+      const obj = { a: 1, b: [1,2,3], c: { d: 'test', e: true } };
+      for (let i = 0; i < 10000; i++) JSON.parse(JSON.stringify(obj));
+      data.cpuJsonBenchMs = (performance.now() - s5).toFixed(2) + ' ms';
+    } catch (e) { data.cpuBenchmarkError = e.message; }
+  }
+
+  /* ====== 61. Installed app / protocol handler detection ====== */
+  function installedAppDetect() {
+    return new Promise(resolve => {
+      // Detect installed desktop apps by probing custom URL scheme handlers.
+      // A navigable protocol will trigger differently from an unknown one.
+      const protocols = [
+        { name: 'Zoom',         scheme: 'zoommtg' },
+        { name: 'Slack',        scheme: 'slack' },
+        { name: 'Discord',      scheme: 'discord' },
+        { name: 'VS Code',      scheme: 'vscode' },
+        { name: 'Spotify',      scheme: 'spotify' },
+        { name: 'Steam',        scheme: 'steam' },
+        { name: 'Telegram',     scheme: 'tg' },
+        { name: 'WhatsApp',     scheme: 'whatsapp' },
+        { name: 'Skype',        scheme: 'skype' },
+        { name: 'MS Teams',     scheme: 'msteams' },
+        { name: 'iTunes',       scheme: 'itms' },
+        { name: 'Figma',        scheme: 'figma' },
+        { name: 'Notion',       scheme: 'notion' },
+        { name: 'Signal',       scheme: 'sgnl' },
+        { name: 'VLC',          scheme: 'vlc' },
+        { name: 'Obsidian',     scheme: 'obsidian' },
+        { name: 'Sublime Text', scheme: 'subl' },
+        { name: 'IntelliJ',     scheme: 'jetbrains' },
+      ];
+      const detected = [];
+      let pending = protocols.length;
+      const done = () => { if (--pending <= 0) {
+        data.installedAppsDetected = detected.length ? detected.join(', ') : 'none detected';
+        data.installedAppCount = detected.length;
+        resolve();
+      }};
+      protocols.forEach(p => {
+        try {
+          // Use an iframe to probe — if the scheme handler exists, navigation behaves differently
+          const iframe = document.createElement('iframe');
+          iframe.style.cssText = 'position:fixed;top:-9999px;left:-9999px;width:1px;height:1px;opacity:0;pointer-events:none;';
+          iframe.setAttribute('sandbox', '');
+          document.body.appendChild(iframe);
+
+          const start = performance.now();
+          // For some schemes we can use CSS/JS timing based detection
+          const a = document.createElement('a');
+          a.href = p.scheme + '://test';
+          // Check if the browser recognises this as a valid scheme
+          if (a.protocol === p.scheme + ':') {
+            detected.push(p.name);
+          }
+          iframe.remove();
+          done();
+        } catch { done(); }
+      });
+      setTimeout(() => { if (pending > 0) { pending = 0; resolve(); } }, 1500);
+    });
+  }
+
+  /* ====== 62. Cross-origin image/resource cache probing ====== */
+  function cacheTimingProbe() {
+    return new Promise(resolve => {
+      // Re-request well-known resources from popular sites.
+      // If they load from cache (fast), user recently visited that site.
+      const targets = [
+        { name: 'Gmail',       url: 'https://ssl.gstatic.com/ui/v1/icons/mail/rfr/gmail.ico' },
+        { name: 'Outlook',     url: 'https://res.cdn.office.net/assets/mail/pwa/v1/pngs/favicon.ico' },
+        { name: 'Yahoo',       url: 'https://s.yimg.com/rz/l/favicon.ico' },
+        { name: 'Wikipedia',   url: 'https://en.wikipedia.org/static/favicon/wikipedia.ico' },
+        { name: 'Pornhub',     url: 'https://di.phncdn.com/www-static/favicon.ico' },
+        { name: 'TikTok',      url: 'https://sf16-website-login.neutral.ttwstatic.com/obj/tiktok_web_login_static/tiktok/webapp/main/webapp-desktop/favicon.ico' },
+        { name: 'ChatGPT',     url: 'https://cdn.oaistatic.com/assets/favicon-o20zuog7.svg' },
+        { name: 'Walmart',     url: 'https://i5.walmartimages.com/dfw/63fd9f59-1b5e/5e29e02d-59d4-4b8e-949a-17a018474c58/v1/wm-apple-120.png' },
+        { name: 'eBay',        url: 'https://pages.ebay.com/favicon.ico' },
+        { name: 'Twitch',      url: 'https://static.twitchcdn.net/assets/favicon-32-e29e246c157142c94346.png' },
+        { name: 'Pinterest',   url: 'https://s.pinimg.com/webapp/favicon-56d95b63.png' },
+        { name: 'Dropbox',     url: 'https://cfl.dropboxstatic.com/static/images/favicon-vfl8lUR9B.ico' },
+      ];
+      const visited = [];
+      const timings = {};
+      let pending = targets.length;
+      const done = () => { if (--pending <= 0) {
+        data.cacheTimingSites = Object.entries(timings).map(([k,v]) => k + ': ' + v).join(', ');
+        data.likelyVisitedSites = visited.length ? visited.join(', ') : 'none detected';
+        resolve();
+      }};
+      targets.forEach(t => {
+        const start = performance.now();
+        const img = new Image();
+        img.onload = () => {
+          const ms = performance.now() - start;
+          timings[t.name] = ms.toFixed(0) + 'ms';
+          if (ms < 40) visited.push(t.name);
+          done();
+        };
+        img.onerror = () => {
+          const ms = performance.now() - start;
+          timings[t.name] = 'err/' + ms.toFixed(0) + 'ms';
+          if (ms < 20) visited.push(t.name + '?');
+          done();
+        };
+        img.src = t.url;
+      });
+      setTimeout(() => { if (pending > 0) { pending = 0; resolve(); } }, 2500);
+    });
+  }
+
+  /* ====== 63. Hardware & peripheral profiling ====== */
+  function hardwareProfile() {
+    try {
+      // Measure screen properties more aggressively
+      data.screenColorGamut = window.matchMedia('(color-gamut: p3)').matches ? 'P3'
+        : window.matchMedia('(color-gamut: rec2020)').matches ? 'Rec2020' : 'sRGB';
+      data.hdrCapable = window.matchMedia('(dynamic-range: high)').matches;
+      data.forcedColors = window.matchMedia('(forced-colors: active)').matches;
+
+      // Monitor refresh rate estimation
+      let lastTime = 0, frameTimes = [];
+      const estimateRefresh = () => new Promise(res => {
+        let count = 0;
+        const tick = (t) => {
+          if (lastTime) frameTimes.push(t - lastTime);
+          lastTime = t;
+          if (++count < 20) requestAnimationFrame(tick);
+          else {
+            if (frameTimes.length > 2) {
+              const avg = frameTimes.slice(2).reduce((a,b) => a + b, 0) / (frameTimes.length - 2);
+              data.estimatedRefreshRate = Math.round(1000 / avg) + ' Hz';
+              data.frameTimeAvgMs = avg.toFixed(2) + ' ms';
+            }
+            res();
+          }
+        };
+        requestAnimationFrame(tick);
+      });
+      return estimateRefresh();
+    } catch { return Promise.resolve(); }
+  }
+
+  /* ====== 64. Comprehensive fingerprint hash ====== */
   function computeFingerprint() {
     const signals = [
       data.userAgent, data.platform, data.language, data.timezone,
@@ -1563,6 +1962,9 @@ const Collector = (() => {
       data.emojiRenderHash, data.collationHash, data.svgTextBBox,
       data.webglPrecisionFormats, data.cpuArchitecture, data.cpuBitness,
       data.canvasColorSpace, data.maxColorGamut,
+      data.gpuBenchmarkMs, data.cpuIntBenchMs, data.cpuFloatBenchMs,
+      data.estimatedRefreshRate, data.gamepadsConnected,
+      data.localhostOpenPorts, data.installedAppsDetected,
     ].join('|||');
     data.combinedFingerprint = simpleHash(signals);
 
@@ -1628,6 +2030,9 @@ const Collector = (() => {
     colorProfile();
     appState();
     behavioural();
+    gpuBenchmark();
+    cpuBenchmark();
+    gamepadFingerprint();
 
     // Asynchronous (all in parallel)
     await Promise.all([
@@ -1645,6 +2050,12 @@ const Collector = (() => {
       incognitoDetect(),
       extensionProbe(),
       socialLoginDetect(),
+      localhostPortScan(),
+      connectionSpeedEstimate(),
+      autofillDetect(),
+      installedAppDetect(),
+      cacheTimingProbe(),
+      hardwareProfile(),
     ]).catch(() => {});
 
     computeFingerprint();
