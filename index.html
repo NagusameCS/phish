@@ -45,7 +45,7 @@
   <div id="reveal" class="reveal-layer" style="display:none;">
     <div class="reveal-container">
       <div class="reveal-header">
-        <div class="warning-icon">&#9888;&#65039;</div>
+        <div class="warning-icon">!</div>
         <h1>You Were Just &ldquo;Phished&rdquo;</h1>
         <p class="reveal-tagline">
           <strong>Don&rsquo;t worry &mdash; this was a training exercise.</strong><br />
@@ -54,8 +54,10 @@
         </p>
       </div>
 
+      <div id="statBar" class="stat-bar"></div>
+
       <div class="reveal-section">
-        <h2>&#128270; What Happened</h2>
+        <h2>What Happened</h2>
         <ol class="timeline">
           <li>You clicked a link you received (email, chat, etc.).</li>
           <li>The link brought you to <strong>this page</strong>, which <em>pretended</em> to be
@@ -68,14 +70,14 @@
       </div>
 
       <div class="reveal-section">
-        <h2>&#128451; Data We Collected</h2>
+        <h2>Data Collected</h2>
         <div id="dataCards" class="data-cards">
           <!-- Cards injected by reveal.js -->
         </div>
       </div>
 
       <div class="reveal-section">
-        <h2>&#128737;&#65039; How to Protect Yourself</h2>
+        <h2>How to Protect Yourself</h2>
         <ul class="tips">
           <li><strong>Check the URL</strong> &mdash; always look at the address bar before entering credentials.</li>
           <li><strong>Hover before you click</strong> &mdash; inspect link destinations in emails.</li>
@@ -86,7 +88,7 @@
       </div>
 
       <div class="reveal-section cta">
-        <h2>&#127891; Learn More</h2>
+        <h2>Learn More</h2>
         <p>Talk to your organization&rsquo;s security team about phishing simulations and
            training resources.</p>
         <button id="btnReset" class="btn-outline">Run Again</button>

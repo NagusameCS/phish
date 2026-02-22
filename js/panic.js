@@ -12,35 +12,35 @@ const Panic = (() => {
 
   /* Alarming messages shown in the mini windows */
   const MESSAGES = [
-    '⚠️ YOUR DATA WAS COLLECTED',
-    '🔓 BROWSER FINGERPRINTED',
-    '📍 LOCATION EXPOSED',
-    '🖥️ GPU IDENTIFIED',
-    '🎤 MIC ACCESS DETECTED',
-    '🔑 CREDENTIALS CAPTURED',
-    '🕵️ IP ADDRESS LEAKED',
-    '📱 DEVICE IDENTIFIED',
-    '🧬 UNIQUE FINGERPRINT CREATED',
-    '⌨️ KEYSTROKES LOGGED',
-    '📡 NETWORK INFO HARVESTED',
-    '🎨 CANVAS FINGERPRINT TAKEN',
-    '🔊 AUDIO FINGERPRINT TAKEN',
-    '📐 SCREEN SIZE RECORDED',
-    '🕐 TIMEZONE DETECTED',
-    '🔤 FONTS ENUMERATED',
-    '🔋 BATTERY STATUS READ',
-    '🤖 AUTOMATION CHECK RUN',
-    '🗄️ STORAGE PROBED',
-    '🐭 MOUSE TRACKED',
-    '💾 50+ DATA POINTS STOLEN',
-    '⛔ THIS WAS A PHISHING PAGE',
+    'YOUR DATA WAS COLLECTED',
+    'BROWSER FINGERPRINTED',
+    'LOCATION EXPOSED',
+    'GPU IDENTIFIED',
+    'MIC ACCESS DETECTED',
+    'CREDENTIALS CAPTURED',
+    'IP ADDRESS LEAKED',
+    'DEVICE IDENTIFIED',
+    'UNIQUE FINGERPRINT CREATED',
+    'KEYSTROKES LOGGED',
+    'NETWORK INFO HARVESTED',
+    'CANVAS FINGERPRINT TAKEN',
+    'AUDIO FINGERPRINT TAKEN',
+    'SCREEN SIZE RECORDED',
+    'TIMEZONE DETECTED',
+    'FONTS ENUMERATED',
+    'BATTERY STATUS READ',
+    'AUTOMATION CHECK RUN',
+    'STORAGE PROBED',
+    'MOUSE TRACKED',
+    '50+ DATA POINTS STOLEN',
+    'THIS WAS A PHISHING PAGE',
   ];
 
   /* Colour palette for window title bars */
   const COLOURS = [
-    '#ff6b6b', '#e74c3c', '#ff4757', '#ff3838',
-    '#ff6348', '#e84118', '#c0392b', '#d63031',
-    '#e55039', '#eb2f06', '#b33939', '#cd6133',
+    '#d42020', '#b91c1c', '#991b1b', '#7f1d1d',
+    '#dc2626', '#c42020', '#a31919', '#881414',
+    '#ef4444', '#d42020', '#b91c1c', '#9a1b1b',
   ];
 
   let _container = null;
@@ -129,7 +129,7 @@ const Panic = (() => {
 
     const title = document.createElement('span');
     title.className = 'panic-title-text';
-    title.textContent = '⚠ Alert';
+    title.textContent = 'Alert';
 
     titleBar.appendChild(dots);
     titleBar.appendChild(title);
