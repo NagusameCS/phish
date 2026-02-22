@@ -1,11 +1,12 @@
 /* ============================================================
    decoy.js — Loads the REAL target site (or a convincing fake)
    ============================================================
-   Strategy order:
-     1. Direct iframe  → pixel-perfect, but blocked if site sends
-        X-Frame-Options / CSP frame-ancestors.
-     2. CORS-proxy fetch → grab HTML, inject <base> tag, render
-        via srcdoc iframe. Works for most sites.
+   Strategy order (most reliable first):
+     1. CORS-proxy fetch → grab HTML, inject <base> tag, render
+        via srcdoc iframe. Most reliable — we know if it worked.
+     2. Direct iframe  → pixel-perfect if site allows framing.
+        Unreliable detection (X-Frame-Options blocks look like
+        cross-origin loads) so tried second.
      3. Fallback fake login → generated branded login card.
    ============================================================ */
 
@@ -17,9 +18,29 @@ const Decoy = (() => {
 
   /* ---- CORS proxy services (tried in order) ---- */
   const CORS_PROXIES = [
-    url => `https://api.allorigins.win/raw?url=${encodeURIComponent(url)}`,
-    url => `https://corsproxy.io/?${encodeURIComponent(url)}`,
-    url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+    {
+      name: 'allorigins',
+      make: url => `https://api.allorigins.win/get?url=${encodeURIComponent(url)}`,
+      parse: async resp => {
+        const json = await resp.json();
+        return json.contents || '';
+      },
+    },
+    {
+      name: 'corsproxy.io',
+      make: url => `https://corsproxy.io/?url=${encodeURIComponent(url)}`,
+      parse: async resp => resp.text(),
+    },
+    {
+      name: 'codetabs',
+      make: url => `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(url)}`,
+      parse: async resp => resp.text(),
+    },
+    {
+      name: 'corsproxy.org',
+      make: url => `https://corsproxy.org/?${encodeURIComponent(url)}`,
+      parse: async resp => resp.text(),
+    },
   ];
 
   /* ==========================================================
@@ -56,7 +77,9 @@ const Decoy = (() => {
     const fav = document.getElementById('favicon');
     const realFav = new Image();
     realFav.onload = () => { fav.href = realFav.src; };
-    realFav.onerror = () => { fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg); };
+    realFav.onerror = () => {
+      fav.href = 'data:image/svg+xml;utf8,' + encodeURIComponent(svg);
+    };
     realFav.src = `https://www.google.com/s2/favicons?domain=${cfg.domain}&sz=64`;
 
     // Apply brand colour to fake address bar lock icon
@@ -68,30 +91,138 @@ const Decoy = (() => {
      ========================================================== */
   async function loadRealSite(cfg) {
     const targetUrl = `https://${cfg.domain}${cfg.path}`;
+    log('Loading target:', targetUrl);
 
-    // Strategy 1: Direct iframe
-    const iframeOk = await tryDirectIframe(targetUrl);
-    if (iframeOk) { _mode = 'iframe'; return 'iframe'; }
+    // Show loading indicator
+    showLoading(true);
 
-    // Strategy 2: CORS proxy fetch → srcdoc
-    const proxyOk = await tryProxyFetch(targetUrl, cfg.domain);
-    if (proxyOk) { _mode = 'proxy'; return 'proxy'; }
+    // Strategy 1: CORS proxy fetch → srcdoc (most reliable)
+    try {
+      const proxyOk = await tryProxyFetch(targetUrl, cfg.domain);
+      if (proxyOk) {
+        _mode = 'proxy';
+        log('SUCCESS — mode: proxy');
+        showLoading(false);
+        return 'proxy';
+      }
+    } catch (e) {
+      log('Proxy strategy threw:', e.message);
+    }
+
+    // Strategy 2: Direct iframe (works only if site allows framing)
+    try {
+      const iframeOk = await tryDirectIframe(targetUrl);
+      if (iframeOk) {
+        _mode = 'iframe';
+        log('SUCCESS — mode: iframe');
+        showLoading(false);
+        return 'iframe';
+      }
+    } catch (e) {
+      log('Iframe strategy threw:', e.message);
+    }
 
     // Strategy 3: fake login is already rendered
     _mode = 'fake';
+    log('All strategies failed — mode: fake (fallback)');
+    showLoading(false);
     return 'fake';
   }
 
-  /* ---------- Strategy 1: Direct iframe ---------- */
+  /* ---------- Strategy 1: CORS proxy → srcdoc ---------- */
+  async function tryProxyFetch(targetUrl, domain) {
+    for (const proxy of CORS_PROXIES) {
+      try {
+        const proxyUrl = proxy.make(targetUrl);
+        log(`Trying proxy [${proxy.name}]:`, proxyUrl);
+
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 10000);
+
+        const resp = await fetch(proxyUrl, {
+          signal: ctrl.signal,
+          headers: { 'Accept': 'text/html,application/json,*/*' },
+        });
+        clearTimeout(timer);
+
+        if (!resp.ok) {
+          log(`[${proxy.name}] HTTP ${resp.status}`);
+          continue;
+        }
+
+        let html = await proxy.parse(resp);
+
+        // Sanity checks
+        if (!html || typeof html !== 'string') {
+          log(`[${proxy.name}] Empty or non-string response`);
+          continue;
+        }
+
+        if (html.length < 100) {
+          log(`[${proxy.name}] Response too short (${html.length} chars)`);
+          continue;
+        }
+
+        // Must look like HTML
+        if (!/<html|<!doctype|<head|<body/i.test(html)) {
+          log(`[${proxy.name}] Response doesn't look like HTML`);
+          continue;
+        }
+
+        log(`[${proxy.name}] Got HTML (${html.length} chars) — rewriting...`);
+
+        // Rewrite the HTML for safe local display
+        html = injectBaseTag(html, domain);
+        html = rewriteMetaTags(html);
+        html = neuterForms(html);
+        html = neutraliseScripts(html);
+
+        // Create srcdoc iframe
+        const iframe = document.createElement('iframe');
+        iframe.id = 'realSiteFrame';
+        iframe.className = 'real-site-frame';
+        iframe.sandbox = 'allow-same-origin';
+        iframe.referrerPolicy = 'no-referrer';
+
+        // Append first so it starts rendering
+        document.getElementById('decoy').appendChild(iframe);
+        iframe.srcdoc = html;
+
+        // Wait for render
+        await new Promise(r => {
+          iframe.addEventListener('load', r, { once: true });
+          setTimeout(r, 5000); // max wait 5s
+        });
+
+        _frame = iframe;
+        iframe.classList.add('loaded');
+
+        // Hide the fake login behind
+        const body = document.querySelector('.decoy-body');
+        if (body) body.style.display = 'none';
+
+        log(`[${proxy.name}] Iframe rendered and visible`);
+        return true;
+      } catch (e) {
+        log(`[${proxy.name}] Error:`, e.message);
+        continue;
+      }
+    }
+    return false;
+  }
+
+  /* ---------- Strategy 2: Direct iframe ---------- */
   function tryDirectIframe(url) {
     return new Promise(resolve => {
+      log('Trying direct iframe...');
+
       const iframe = document.createElement('iframe');
       iframe.id = 'realSiteFrame';
       iframe.className = 'real-site-frame';
-      // Prevent frame-busting but allow normal page behaviour
-      iframe.sandbox = 'allow-scripts allow-forms allow-same-origin allow-popups';
       iframe.referrerPolicy = 'no-referrer';
       iframe.loading = 'eager';
+      // No sandbox — let the page render normally
+      // (sandbox can cause subtle breakage with stylesheets and fonts)
 
       let settled = false;
 
@@ -100,99 +231,92 @@ const Decoy = (() => {
         settled = true;
         _frame = iframe;
         iframe.classList.add('loaded');
-        // Hide the fake login content behind
         const body = document.querySelector('.decoy-body');
         if (body) body.style.display = 'none';
+        log('Direct iframe: success');
         resolve(true);
       };
 
-      const fail = () => {
+      const fail = (reason) => {
         if (settled) return;
         settled = true;
         iframe.remove();
+        log('Direct iframe: failed —', reason);
         resolve(false);
       };
 
       iframe.addEventListener('load', () => {
-        try {
-          // If we CAN read the location → same-origin (about:blank / error)
-          const loc = iframe.contentWindow.location.href;
-          // about:blank or empty means blocked
-          if (!loc || loc === 'about:blank') { fail(); return; }
-          // Rare: actually same-origin page loaded
-          succeed();
-        } catch (_e) {
-          // SecurityError → cross-origin page loaded → real site!
-          succeed();
-        }
+        // Wait a frame for rendering
+        requestAnimationFrame(() => {
+          try {
+            // Try to peek at the frame content
+            const doc = iframe.contentDocument;
+            if (!doc || !doc.body) { fail('empty document'); return; }
+
+            const text = (doc.body.innerText || '').trim();
+            const children = doc.body.children.length;
+
+            // Check for browser error pages (very short text, few elements)
+            if (text.length < 5 && children < 3) {
+              fail('looks like blank/error page');
+              return;
+            }
+
+            // Readable + has content → same-origin page loaded correctly
+            succeed();
+          } catch (_e) {
+            // SecurityError → cross-origin content loaded
+            // This COULD be the real site OR an X-Frame-Options error page
+            // We check the iframe dimensions as a heuristic:
+            // Real sites typically render at full width; error pages may not
+            // But this is unreliable, so we try a pixel test
+            try {
+              // If the iframe is completely blank (0x0), it's broken
+              if (iframe.offsetWidth === 0 || iframe.offsetHeight === 0) {
+                fail('zero-size frame (likely blocked)');
+                return;
+              }
+              // Best effort — assume a rendered cross-origin frame = real site
+              succeed();
+            } catch (_e2) {
+              fail('could not inspect frame');
+            }
+          }
+        });
       });
 
-      iframe.addEventListener('error', fail);
+      iframe.addEventListener('error', () => fail('error event'));
 
-      // Timeout — if nothing happens in 5 s, give up
-      setTimeout(() => { if (!settled) fail(); }, 5000);
+      // Timeout
+      setTimeout(() => { if (!settled) fail('timeout (6s)'); }, 6000);
 
       document.getElementById('decoy').appendChild(iframe);
       iframe.src = url;
     });
   }
 
-  /* ---------- Strategy 2: CORS proxy → srcdoc ---------- */
-  async function tryProxyFetch(targetUrl, domain) {
-    for (const makeProxyUrl of CORS_PROXIES) {
-      try {
-        const proxyUrl = makeProxyUrl(targetUrl);
-        const ctrl = new AbortController();
-        const timer = setTimeout(() => ctrl.abort(), 8000);
-
-        const resp = await fetch(proxyUrl, { signal: ctrl.signal });
-        clearTimeout(timer);
-
-        if (!resp.ok) continue;
-        let html = await resp.text();
-        if (!html || html.length < 200) continue;
-
-        // Inject <base> so relative URLs resolve to the real domain
-        html = injectBaseTag(html, domain);
-        // Neuter form actions so nothing actually submits
-        html = neuterForms(html);
-        // Block scripts from the proxied page to avoid errors
-        html = neutraliseScripts(html);
-
-        // Create srcdoc iframe
-        const iframe = document.createElement('iframe');
-        iframe.id = 'realSiteFrame';
-        iframe.className = 'real-site-frame';
-        iframe.sandbox = 'allow-same-origin';  // no scripts — static snapshot
-        iframe.srcdoc = html;
-
-        document.getElementById('decoy').appendChild(iframe);
-
-        // Wait for render
-        await new Promise(r => {
-          iframe.addEventListener('load', r, { once: true });
-          setTimeout(r, 4000);
-        });
-
-        _frame = iframe;
-        iframe.classList.add('loaded');
-        const body = document.querySelector('.decoy-body');
-        if (body) body.style.display = 'none';
-        return true;
-      } catch (_e) {
-        continue;
-      }
-    }
-    return false;
-  }
-
   /* ---------- HTML rewriting helpers ---------- */
   function injectBaseTag(html, domain) {
     const base = `https://${domain}`;
-    const tag  = `<base href="${base}/">`;
-    if (/<head[^>]*>/i.test(html))       return html.replace(/<head[^>]*>/i, `$&${tag}`);
-    if (/<html[^>]*>/i.test(html))       return html.replace(/<html[^>]*>/i, `$&<head>${tag}</head>`);
-    return `<head>${tag}</head>${html}`;
+    const tag  = `<base href="${base}/" target="_self">`;
+    // Remove any existing base tags first
+    html = html.replace(/<base[^>]*>/gi, '');
+    if (/<head[^>]*>/i.test(html)) {
+      return html.replace(/<head[^>]*>/i, `$&\n${tag}`);
+    }
+    if (/<html[^>]*>/i.test(html)) {
+      return html.replace(/<html[^>]*>/i, `$&\n<head>${tag}</head>`);
+    }
+    return `<head>${tag}</head>\n${html}`;
+  }
+
+  function rewriteMetaTags(html) {
+    // Remove X-Frame-Options meta tags and CSP meta tags that might block rendering
+    html = html.replace(/<meta[^>]*http-equiv\s*=\s*["']?X-Frame-Options["']?[^>]*>/gi, '');
+    html = html.replace(/<meta[^>]*http-equiv\s*=\s*["']?Content-Security-Policy["']?[^>]*>/gi, '');
+    // Remove any refresh/redirect meta tags
+    html = html.replace(/<meta[^>]*http-equiv\s*=\s*["']?refresh["']?[^>]*>/gi, '');
+    return html;
   }
 
   function neuterForms(html) {
@@ -202,8 +326,11 @@ const Decoy = (() => {
   }
 
   function neutraliseScripts(html) {
-    // Replace <script> tags with inert versions so the static snapshot doesn't error
-    return html.replace(/<script(\b[^>]*)>/gi, '<script type="text/blocked"$1>');
+    // Completely remove script tags and their content for clean rendering
+    html = html.replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, '');
+    // Also remove noscript content (show the underlying content)
+    html = html.replace(/<\/?noscript[^>]*>/gi, '');
+    return html;
   }
 
   /* ---------- SVG logo helper ---------- */
@@ -218,6 +345,22 @@ const Decoy = (() => {
   /* ==========================================================
      UI helpers
      ========================================================== */
+
+  /** Loading indicator */
+  function showLoading(show) {
+    let el = document.getElementById('decoyLoading');
+    if (show) {
+      if (!el) {
+        el = document.createElement('div');
+        el.id = 'decoyLoading';
+        el.className = 'loading-bar';
+        document.getElementById('decoy').prepend(el);
+      }
+      el.style.display = '';
+    } else if (el) {
+      el.remove();
+    }
+  }
 
   /** Show a brief spinner, then fire callback */
   function showSpinner(duration, cb) {
@@ -250,6 +393,11 @@ const Decoy = (() => {
 
   /** Get the active mode for display */
   function getMode() { return _mode; }
+
+  /** Console logger with prefix */
+  function log(...args) {
+    console.log('%c[phish-training]', 'color:#4a90d9;font-weight:bold', ...args);
+  }
 
   return { render, loadRealSite, bindForm, showSpinner, hide, getMode };
 })();

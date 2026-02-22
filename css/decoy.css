@@ -175,16 +175,28 @@ html, body {
   z-index: 500;
   background: #fff;
   opacity: 0;
-  transition: opacity .4s ease;
+  transition: opacity .5s ease;
 }
 .real-site-frame.loaded {
   opacity: 1;
 }
 
-/* Loading shimmer while iframe loads */
-.decoy-layer::after {
-  content: '';
-  display: none;  /* activated by JS if needed */
+/* ---- Loading bar (animated stripe at top) ---- */
+.loading-bar {
+  position: fixed;
+  top: 40px;
+  left: 0;
+  width: 100%;
+  height: 3px;
+  z-index: 1001;
+  background: linear-gradient(90deg, transparent 0%, #4a90d9 30%, #7bed9f 60%, transparent 100%);
+  background-size: 200% 100%;
+  animation: loadSlide 1.4s ease-in-out infinite;
+}
+
+@keyframes loadSlide {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
 }
 
 /* ---- Spinner overlay (shown while collecting) ---- */
