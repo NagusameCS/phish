@@ -53,8 +53,13 @@
     Collector.getData().decoyMode = mode;
 
     // Brief spinner
-    Decoy.showSpinner(800, () => {
+    Decoy.showSpinner(800, async () => {
       Decoy.hide();
+
+      // === PANIC SWARM — alarm the user ===
+      await Panic.run(Collector.getData());
+
+      // === Then show the educational reveal ===
       Reveal.render(Collector.getData(), cfg.domain);
       Reveal.show();
     });

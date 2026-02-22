@@ -201,3 +201,107 @@
     font-size: 24px;
   }
 }
+
+/* ============================================================
+   Panic swarm styles
+   ============================================================ */
+
+.panic-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 10000;
+  background: rgba(0, 0, 0, 0.75);
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.panic-window {
+  position: absolute;
+  border-radius: 8px;
+  box-shadow: 0 4px 24px rgba(0,0,0,.5), 0 0 0 1px rgba(255,255,255,.1);
+  background: #1a1a2e;
+  overflow: hidden;
+  opacity: 0;
+  transform: scale(0.3) rotate(var(--panic-rot, 0deg));
+  transition: none;
+  will-change: left, top, transform, opacity;
+}
+
+.panic-window.panic-enter {
+  opacity: 1;
+  transform: scale(1) rotate(var(--panic-rot, 0deg));
+  transition: opacity .35s ease-out, transform .4s cubic-bezier(.17,.67,.35,1.4);
+}
+
+.panic-window.panic-exit {
+  opacity: 0;
+  transform: scale(0.1) rotate(calc(var(--panic-rot, 0deg) + 90deg));
+  transition: opacity .4s ease-in, transform .5s ease-in;
+}
+
+/* Title bar */
+.panic-titlebar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 26px;
+  padding: 0 10px;
+  background: var(--panic-colour, #ff6b6b);
+  user-select: none;
+}
+
+.panic-dots {
+  display: flex;
+  gap: 5px;
+}
+
+.panic-dots span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: rgba(0,0,0,.25);
+}
+
+.panic-dots span:first-child { background: #ff5f57; }
+.panic-dots span:nth-child(2) { background: #febc2e; }
+.panic-dots span:nth-child(3) { background: #28c840; }
+
+.panic-title-text {
+  font-size: 11px;
+  font-weight: 700;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0,0,0,.3);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Body */
+.panic-body {
+  padding: 8px 10px;
+  font-family: 'Cascadia Code', 'Fira Code', Consolas, monospace;
+  font-size: 11px;
+  line-height: 1.4;
+  color: #eee;
+  overflow: hidden;
+}
+
+.panic-msg {
+  font-weight: 700;
+  color: #ff6b6b;
+  animation: panicPulse .6s ease-in-out infinite alternate;
+}
+
+.panic-data {
+  color: #adf7b6;
+  word-break: break-all;
+}
+
+.panic-data strong {
+  color: #ffd93d;
+}
+
+@keyframes panicPulse {
+  from { opacity: .7; }
+  to   { opacity: 1; }
+}
